@@ -6,6 +6,7 @@ ARCHIVE_DIR = "./WikipediaImages/Archives/"
 IMAGE_DIR = "./WikipediaImages/Images/"
 
 logger = logging.getLogger("awi")
+logger.setLevel(logging.INFO)
 
 if __name__ == "__main__":
     logger.info("ZIPファイルの解凍を開始します。")

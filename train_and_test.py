@@ -1,19 +1,16 @@
 import json
 import logging
+import os
 from tqdm import tqdm
-
 import numpy as np
 import torch
-
 from transformers import BertJapaneseTokenizer, BertForMultipleChoice
 
 TRAIN_JSON_FILENAME = "./Data/train_questions.json"
 DEV1_JSON_FILENAME = "./Data/dev1_questions.json"
 DEV2_JSON_FILENAME = "./Data/dev2_questions.json"
 
-TRAIN_FEATURES_DIR = "./Features/Train/"
-DEV1_FEATURES_DIR = "./Features/Dev1/"
-DEV2_FEATURES_DIR = "./Features/Dev2/"
+FEATURES_DIR = "./WikipediaImages/Features/"
 
 EPOCH_NUM = 5
 BATCH_SIZE = 128
@@ -25,11 +22,11 @@ tokenizer = BertJapaneseTokenizer.from_pretrained(
 )
 
 logger = logging.getLogger("awi")
+logger.setLevel(logging.INFO)
 
 
 class InputExample(object):
-    def __init__(self, example_id, question, endings, label=None):
-        self.example_id = example_id
+    def __init__(self, question, endings, label=None):
         self.question = question
         self.endings = endings
         self.label = label
@@ -71,25 +68,19 @@ def load_examples(json_filename, cache_dir):
     for line in tqdm(lines):
         data = json.loads(line)
 
-        qid = data["qid"]
         question = data["question"].replace("_", "")
         options = data["answer_candidates"][:20]
         answer = data["answer_entity"]
 
         label = options.index(answer)
 
-        example = InputExample(qid, question, options, label)
+        example = InputExample(question, options, label)
         examples.append(example)
 
     return examples
 
 
-def convert_example_to_features(example, cache_dir):
-    # 画像の特徴量を読み込む。
-    image_features_filename = cache_dir + example.qid + "/" + "image_features.pt"
-    image_features = torch.load(image_features_filename)
-    image_features_length = image_features.size()[0]
-
+def convert_example_to_features(example):
     choices_features = []
 
     # 選択肢それぞれについて処理を行う。
@@ -107,6 +98,20 @@ def convert_example_to_features(example, cache_dir):
 
         input_ids = encoding["input_ids"].cuda().float()
         text_features_length = input_ids.size()[0]  # input_idsのうちテキスト部分の長さ
+
+        # 画像の特徴量を読み込む。
+        article_name = example.endings[example.label]
+        image_features_filename = (
+            FEATURES_DIR + article_name + "/" + "image_features.pt"
+        )
+
+        image_features = None
+        if os.path.exists(image_features_filename) == True:
+            image_features = torch.load(image_features_filename)
+        else:
+            image_features = torch.zeros(0).cuda().float()
+
+        image_features_length = image_features.size()[0]
 
         # 画像の特徴量を結合する。
         input_ids = torch.cat([input_ids, image_features], dim=0)
@@ -142,14 +147,14 @@ def convert_example_to_features(example, cache_dir):
     return ret
 
 
-def create_input_features_dataset(json_filename, cache_dir):
+def create_input_features_dataset(json_filename):
     logger.info("入力特徴量の生成を開始します。")
 
-    examples = load_examples(json_filename, cache_dir)
+    examples = load_examples(json_filename, FEATURES_DIR)
 
     ret = InputFeaturesDataset()
     for example in examples:
-        features = convert_example_to_features(example, cache_dir)
+        features = convert_example_to_features(example, FEATURES_DIR)
         ret.append(features)
 
     logging.info("入力特徴量の生成を完了しました。")
@@ -267,10 +272,8 @@ if __name__ == "__main__":
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
-    train_dataset = create_input_features_dataset(
-        TRAIN_JSON_FILENAME, TRAIN_FEATURES_DIR
-    )
+    train_dataset = create_input_features_dataset(TRAIN_JSON_FILENAME)
     train(model, train_dataset)
 
-    test_dataset = create_input_features_dataset(DEV2_JSON_FILENAME, DEV2_FEATURES_DIR)
+    test_dataset = create_input_features_dataset(DEV2_JSON_FILENAME)
     test(model, test_dataset)
