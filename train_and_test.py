@@ -10,7 +10,10 @@ TRAIN_JSON_FILENAME = "./Data/train_questions.json"
 DEV1_JSON_FILENAME = "./Data/dev1_questions.json"
 DEV2_JSON_FILENAME = "./Data/dev2_questions.json"
 
-FEATURES_DIR = "./WikipediaImages/Features/"
+IMAGE_FEATURES_DIR = "./WikipediaImages/Features/"
+TRAIN_FEATURES_DIR = "./Features/Train/"
+DEV1_FEATURES_DIR = "./Features/Dev1/"
+DEV2_FEATURES_DIR = "./Features/Dev2/"
 
 EPOCH_NUM = 5
 BATCH_SIZE = 128
@@ -27,7 +30,8 @@ logger.setLevel(level=logging.INFO)
 
 
 class InputExample(object):
-    def __init__(self, question, endings, label=None):
+    def __init__(self, qid, question, endings, label=None):
+        self.qid = qid
         self.question = question
         self.endings = endings
         self.label = label
@@ -69,87 +73,128 @@ def load_examples(json_filename):
     for line in lines:
         data = json.loads(line)
 
+        qid = data["qid"]
         question = data["question"].replace("_", "")
         options = data["answer_candidates"][:20]
         answer = data["answer_entity"]
 
         label = options.index(answer)
 
-        example = InputExample(question, options, label)
+        example = InputExample(qid, question, options, label)
         examples.append(example)
 
     return examples
 
 
-def convert_example_to_features(example):
+def convert_example_to_features(example, use_cache, cache_dir):
     choices_features = []
 
-    # 選択肢それぞれについて処理を行う。
-    for ending in example.endings:
-        # tokenizerの入力は「問題文」+「選択肢」
-        input_text = example.question + "[SEP]" + ending
+    if use_cache == False:
+        # 選択肢それぞれについて処理を行う。
+        for i, ending in enumerate(example.endings):
+            # tokenizerの入力は「問題文」+「選択肢」
+            input_text = example.question + "[SEP]" + ending
 
-        # tokenizerを用いてencoding
-        encoding = tokenizer.encode_plus(
-            input_text,
-            return_tensors="pt",
-            add_special_tokens=True,
-            pad_to_max_length=False,
-        )
-
-        input_ids = encoding["input_ids"].cuda().float()
-        input_ids=input_ids.view(-1)
-        text_features_length = input_ids.size()[0]  # input_idsのうちテキスト部分の長さ
-
-        # 画像の特徴量を読み込む。
-        article_name = example.endings[example.label]
-        image_features_filename = (
-            FEATURES_DIR + article_name + "/" + "image_features.pt"
-        )
-
-        image_features = None
-        if os.path.exists(image_features_filename) == True:
-            image_features = torch.load(image_features_filename)
-        else:
-            image_features = torch.zeros(0).cuda().float()
-
-        image_features_length = image_features.size()[0]
-
-        # 画像の特徴量を結合する。
-        input_ids = torch.cat([input_ids, image_features], dim=0)
-        attention_mask = torch.ones(MAX_SEQ_LENGTH).cuda()
-        # BERTモデルに入力する特徴量が長すぎる場合には、オーバーする部分を切り捨てる。
-        if text_features_length + image_features_length > MAX_SEQ_LENGTH:
-            input_ids = input_ids[:MAX_SEQ_LENGTH]
-        # それ以外の場合には、足りない部分を0で埋める。
-        else:
-            padding_length = MAX_SEQ_LENGTH - (
-                text_features_length + image_features_length
+            # tokenizerを用いてencoding
+            encoding = tokenizer.encode_plus(
+                input_text,
+                return_tensors="pt",
+                add_special_tokens=True,
+                pad_to_max_length=False,
             )
-            zero_padding = torch.zeros(padding_length).cuda().float()
-            input_ids = torch.cat([input_ids, zero_padding], dim=0)
 
-            for i in range(
-                text_features_length + image_features_length, MAX_SEQ_LENGTH
-            ):
-                attention_mask[i] = 0
+            input_ids = encoding["input_ids"].cuda().float()
+            input_ids = input_ids.view(-1)
+            text_features_length = input_ids.size()[0]  # input_idsのうちテキスト部分の長さ
 
-        # token_type_idsの作成
-        # テキスト: 0 画像: 1
-        token_type_ids = torch.zeros(MAX_SEQ_LENGTH).cuda()
-        for i in range(0, text_features_length):
-            token_type_ids[i] = 0
-        for i in range(text_features_length, MAX_SEQ_LENGTH):
-            token_type_ids[i] = 1
+            # 画像の特徴量を読み込む。
+            article_name = example.endings[example.label]
+            image_features_filename = (
+                IMAGE_FEATURES_DIR + article_name + "/" + "image_features.pt"
+            )
 
-        choices_features.append((input_ids, attention_mask, token_type_ids))
+            image_features = None
+            if os.path.exists(image_features_filename) == True:
+                image_features = torch.load(image_features_filename)
+            else:
+                image_features = torch.zeros(0).cuda().float()
+
+            image_features_length = image_features.size()[0]
+
+            # 画像の特徴量を結合する。
+            input_ids = torch.cat([input_ids, image_features], dim=0)
+            attention_mask = torch.ones(MAX_SEQ_LENGTH).cuda()
+            # BERTモデルに入力する特徴量が長すぎる場合には、オーバーする部分を切り捨てる。
+            if text_features_length + image_features_length > MAX_SEQ_LENGTH:
+                input_ids = input_ids[:MAX_SEQ_LENGTH]
+            # それ以外の場合には、足りない部分を0で埋める。
+            else:
+                padding_length = MAX_SEQ_LENGTH - (
+                    text_features_length + image_features_length
+                )
+                zero_padding = torch.zeros(padding_length).cuda().float()
+                input_ids = torch.cat([input_ids, zero_padding], dim=0)
+
+                for i in range(
+                    text_features_length + image_features_length, MAX_SEQ_LENGTH
+                ):
+                    attention_mask[i] = 0
+
+            # token_type_idsの作成
+            # テキスト: 0 画像: 1
+            token_type_ids = torch.zeros(MAX_SEQ_LENGTH).cuda()
+            for i in range(0, text_features_length):
+                token_type_ids[i] = 0
+            for i in range(text_features_length, MAX_SEQ_LENGTH):
+                token_type_ids[i] = 1
+
+            # Tensorを保存する。
+            directory = cache_dir + example.qid + "/" + str(i) + "/"
+            os.makedirs(directory, exist_ok=True)
+
+            tensor.save(input_ids, directory + "input_ids.pt")
+            tensor.save(attention_mask, directory + "attention_mask.pt")
+            tensor.save(token_type_ids, directory + "token_type_ids.pt")
+
+            choices_features.append((input_ids, attention_mask, token_type_ids))
+
+    else:
+        # キャッシュファイルからTensorを読み込む。
+        for i in range(20):
+            directory = cache_dir + example.qid + "/" + str(i) + "/"
+
+            input_ids = tensor.load(directory + "input_ids.pt")
+            attention_mask = tensor.load(directory + "attention_mask.pt")
+            token_type_ids = tensor.load(directory + "token_type_ids.pt")
+
+            choices_features.append((input_ids, attention_mask, token_type_ids))
 
     ret = InputFeatures(choices_features, example.label)
 
     return ret
 
 
-def create_input_features_dataset(json_filename):
+def create_input_features_dataset(json_filename, use_cache, cache_dir):
+    """
+    入力特徴量のデータセットを作成します。
+
+    Parameters
+    ----------
+    json_filename: string
+        読み込むJSONファイルのファイル名
+    use_cache: bool
+        キャッシュファイルを読み込むかどうか
+        Falseを指定すると特徴量を新規作成してキャッシュファイルに保存します。
+        Trueを指定すると特徴量をキャッシュファイルから読み込みます。
+    cache_dir: string
+        キャッシュファイルのディレクトリ名
+
+    Returns
+    ----------
+    ret: InputFeaturesDataset
+        BERTモデルに入力する特徴量のデータセット
+    """
+
     logger.info("入力特徴量の生成を開始します。")
 
     examples = load_examples(json_filename)
@@ -274,8 +319,12 @@ if __name__ == "__main__":
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
-    train_dataset = create_input_features_dataset(TRAIN_JSON_FILENAME)
+    train_dataset = create_input_features_dataset(
+        TRAIN_JSON_FILENAME, False, TRAIN_FEATURES_DIR
+    )
     train(model, train_dataset)
 
-    test_dataset = create_input_features_dataset(DEV2_JSON_FILENAME)
+    test_dataset = create_input_features_dataset(
+        DEV2_JSON_FILENAME, False, DEV2_FEATURES_DIR
+    )
     test(model, test_dataset)
