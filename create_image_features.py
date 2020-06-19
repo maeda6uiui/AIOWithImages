@@ -31,8 +31,9 @@ cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
 )
 predictor = DefaultPredictor(cfg)
 
-logger = logging.getLogger("awi")
-logger.setLevel(logging.INFO)
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.INFO)
 
 
 class ImageInfo(object):

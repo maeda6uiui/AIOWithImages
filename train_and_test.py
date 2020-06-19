@@ -21,8 +21,9 @@ tokenizer = BertJapaneseTokenizer.from_pretrained(
     "cl-tohoku/bert-base-japanese-whole-word-masking"
 )
 
-logger = logging.getLogger("awi")
-logger.setLevel(logging.INFO)
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.INFO)
 
 
 class InputExample(object):
@@ -59,13 +60,13 @@ class InputFeaturesDataset(torch.utils.data.Dataset):
         return self.input_features_list[index]
 
 
-def load_examples(json_filename, cache_dir):
+def load_examples(json_filename):
     examples = []
 
     with open(json_filename, "r", encoding="UTF-8") as r:
         lines = r.read().splitlines()
 
-    for line in tqdm(lines):
+    for line in lines:
         data = json.loads(line)
 
         question = data["question"].replace("_", "")
@@ -97,6 +98,7 @@ def convert_example_to_features(example):
         )
 
         input_ids = encoding["input_ids"].cuda().float()
+        input_ids=input_ids.view(-1)
         text_features_length = input_ids.size()[0]  # input_idsのうちテキスト部分の長さ
 
         # 画像の特徴量を読み込む。
@@ -150,14 +152,14 @@ def convert_example_to_features(example):
 def create_input_features_dataset(json_filename):
     logger.info("入力特徴量の生成を開始します。")
 
-    examples = load_examples(json_filename, FEATURES_DIR)
+    examples = load_examples(json_filename)
 
     ret = InputFeaturesDataset()
-    for example in examples:
-        features = convert_example_to_features(example, FEATURES_DIR)
+    for example in tqdm(examples):
+        features = convert_example_to_features(example)
         ret.append(features)
 
-    logging.info("入力特徴量の生成を完了しました。")
+    logger.info("入力特徴量の生成を完了しました。")
 
     return ret
 
