@@ -135,26 +135,26 @@ def convert_example_to_features(example, use_cache, cache_dir):
                 zero_padding = torch.zeros(padding_length).cuda().float()
                 input_ids = torch.cat([input_ids, zero_padding], dim=0)
 
-                for i in range(
+                for j in range(
                     text_features_length + image_features_length, MAX_SEQ_LENGTH
                 ):
-                    attention_mask[i] = 0
+                    attention_mask[j] = 0
 
             # token_type_idsの作成
             # テキスト: 0 画像: 1
             token_type_ids = torch.zeros(MAX_SEQ_LENGTH).cuda()
-            for i in range(0, text_features_length):
-                token_type_ids[i] = 0
-            for i in range(text_features_length, MAX_SEQ_LENGTH):
-                token_type_ids[i] = 1
+            for j in range(0, text_features_length):
+                token_type_ids[j] = 0
+            for j in range(text_features_length, MAX_SEQ_LENGTH):
+                token_type_ids[j] = 1
 
             # Tensorを保存する。
             directory = cache_dir + example.qid + "/" + str(i) + "/"
             os.makedirs(directory, exist_ok=True)
 
-            tensor.save(input_ids, directory + "input_ids.pt")
-            tensor.save(attention_mask, directory + "attention_mask.pt")
-            tensor.save(token_type_ids, directory + "token_type_ids.pt")
+            torch.save(input_ids, directory + "input_ids.pt")
+            torch.save(attention_mask, directory + "attention_mask.pt")
+            torch.save(token_type_ids, directory + "token_type_ids.pt")
 
             choices_features.append((input_ids, attention_mask, token_type_ids))
 
@@ -163,9 +163,9 @@ def convert_example_to_features(example, use_cache, cache_dir):
         for i in range(20):
             directory = cache_dir + example.qid + "/" + str(i) + "/"
 
-            input_ids = tensor.load(directory + "input_ids.pt")
-            attention_mask = tensor.load(directory + "attention_mask.pt")
-            token_type_ids = tensor.load(directory + "token_type_ids.pt")
+            input_ids = torch.load(directory + "input_ids.pt")
+            attention_mask = torch.load(directory + "attention_mask.pt")
+            token_type_ids = torch.load(directory + "token_type_ids.pt")
 
             choices_features.append((input_ids, attention_mask, token_type_ids))
 
@@ -201,7 +201,7 @@ def create_input_features_dataset(json_filename, use_cache, cache_dir):
 
     ret = InputFeaturesDataset()
     for example in tqdm(examples):
-        features = convert_example_to_features(example)
+        features = convert_example_to_features(example,use_cache,cache_dir)
         ret.append(features)
 
     logger.info("入力特徴量の生成を完了しました。")
