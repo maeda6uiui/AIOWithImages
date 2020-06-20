@@ -16,7 +16,8 @@ DEV1_FEATURES_DIR = "./Features/Dev1/"
 DEV2_FEATURES_DIR = "./Features/Dev2/"
 
 EPOCH_NUM = 5
-BATCH_SIZE = 8
+TRAIN_BATCH_SIZE = 1
+TEST_BATCH_SIZE = 4
 
 MAX_SEQ_LENGTH = 512
 
@@ -49,18 +50,6 @@ class InputFeatures(object):
         ]
         self.label = label
 
-class InputExampleDataset(torch.utils.data.Dataset):
-    def __init__(self):
-        self.examples=[]
-
-    def append(self,example):
-        self.examples.append(example)
-
-    def __len__(self):
-        return len(self.examples)
-
-    def __getitem__(self,index):
-        return self.examples[index]
 
 def load_examples(json_filename):
     examples = []
@@ -84,7 +73,7 @@ def load_examples(json_filename):
     return examples
 
 
-def convert_example_to_features(example, cache_dir):
+def convert_example_to_features(example,cache_dir):
     choices_features = []
 
     # キャッシュファイルからTensorを読み込む。
@@ -104,37 +93,40 @@ def convert_example_to_features(example, cache_dir):
 
 def select_field(features, field):
     return [
-        [choice[field].detach().cpu().numpy() for choice in f.choices_features] for f in features
+        [choice[field].detach().cpu().numpy() for choice in f.choices_features]
+        for f in features
     ]
 
 
-def create_input_features(examples,cache_dir):
+def create_input_features_dataset(json_filename, cache_dir):
     """
-    BERTモデルへの入力特徴量を作成します。
+    入力特徴量のデータセットを作成します。
 
     Parameters
     ----------
-    examples: List[InputExample]
-        これから実行するバッチに含まれる問題のデータセット
+    json_filename: string
+        読み込むJSONファイルのファイル名
     cache_dir: string
-        特徴量のキャッシュファイルが保存されているディレクトリ名
+        キャッシュファイルのディレクトリ名
 
     Returns
     ----------
-    all_input_ids: Tensor
-        input_ids
-    all_input_mask: Tensor
-        input_mask  (attention_mask)
-    all_segment_ids: Tensor
-        segment_ids (token_type_ids)
-    all_label_ids: Tensor
-        label_ids   (labels)
+    dataset: TensorDataset
+        BERTモデルに入力する特徴量のデータセット
     """
 
+    logger.info("入力特徴量の生成を開始します。")
+
+    examples = load_examples(json_filename)
+
     features_list = []
-    for example in examples:
-        features = convert_example_to_features(example,cache_dir)
+    for example in tqdm(examples):
+        features = convert_example_to_features(example, cache_dir)
         features_list.append(features)
+
+    logger.info("入力特徴量の生成を完了しました。")
+
+    logger.info("入力する特徴量のデータセットを作成します。")
 
     all_input_ids = torch.tensor(
         select_field(features_list, "input_ids"), dtype=torch.long
@@ -149,36 +141,37 @@ def create_input_features(examples,cache_dir):
         [f.label for f in features_list], dtype=torch.long
     ).cuda()
 
-    return all_input_ids,all_input_mask,all_segment_ids,all_label_ids
+    dataset = torch.utils.data.TensorDataset(
+        all_input_ids, all_input_mask, all_segment_ids, all_label_ids
+    )
+
+    logger.info("入力する特徴量のデータセットの作成が終了しました。")
+
+    return dataset
 
 
-def train(model):
+def train(model, train_dataset):
     logger.info("訓練を開始します。")
+
+    train_dataloader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True
+    )
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
     log_interval = 5
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
     model.train()
-
-    examples=load_examples(TRAIN_JSON_FILENAME)
-    example_dataset=InputExampleDataset()
-    for example in examples:
-        example_dataset.append(example)
-
-    example_dataloader=torch.utils.data.DataLoader(
-        example_dataset, batch_size=BATCH_SIZE, shuffle=True
-    )
 
     for epoch in range(EPOCH_NUM):
         logger.info("========== Epoch {} / {} ==========".format(epoch + 1, EPOCH_NUM))
 
-        for step,batch in enumerate(tqdm(example_dataloader)):
-            input_ids,attention_mask,token_type_ids,labels=create_input_features(batch,TRAIN_FEATURES_DIR)
+        for step, batch in enumerate(tqdm(train_dataloader)):
+            batch = tuple(t for t in batch)
             inputs = {
-                "input_ids": input_ids,
-                "attention_mask": attention_mask,
-                "token_type_ids": token_type_ids,
-                "labels": labels,
+                "input_ids": batch[0],
+                "attention_mask": batch[1],
+                "token_type_ids": batch[2],
+                "labels": batch[3],
             }
 
             # 勾配の初期化
@@ -196,7 +189,7 @@ def train(model):
             if step % log_interval == 0:
                 logger.info(
                     "進捗: {:.2f} %\t損失: {}".format(
-                        step * len(batch) / len(example_dataloader), loss.item()
+                        step * len(batch) / len(train_dataloader), loss.item()
                     )
                 )
 
@@ -208,29 +201,24 @@ def train(model):
 def test(model, test_dataset):
     logger.info("テストを開始します。")
 
-    model.eval()
-
-    examples=load_examples(DEV2_JSON_FILENAME)
-    example_dataset=InputExampleDataset()
-    for example in examples:
-        example_dataset.append(example)
-
-    example_dataloader=torch.utils.data.DataLoader(
-        example_dataset, batch_size=BATCH_SIZE, shuffle=False
+    test_dataloader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=TEST_BATCH_SIZE, shuffle=False
     )
+
+    model.eval()
 
     eval_loss = 0.0
     nb_eval_steps = 0
     preds = None
     out_label_ids = None
-    for step, batch in enumerate(tqdm(example_dataloader)):
+    for step, batch in enumerate(tqdm(test_dataloader)):
         with torch.no_grad():
-            input_ids,attention_mask,token_type_ids,labels=create_input_features(batch,DEV2_FEATURES_DIR)
+            batch = tuple(t for t in batch)
             inputs = {
-                "input_ids": input_ids,
-                "attention_mask": attention_mask,
-                "token_type_ids": token_type_ids,
-                "labels": labels,
+                "input_ids": batch[0],
+                "attention_mask": batch[1],
+                "token_type_ids": batch[2],
+                "labels": batch[3],
             }
 
             outputs = model(**inputs)
@@ -272,5 +260,12 @@ if __name__ == "__main__":
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
-    train(model)
-    test(model)
+    train_dataset = create_input_features_dataset(
+        TRAIN_JSON_FILENAME, TRAIN_FEATURES_DIR
+    )
+    train(model, train_dataset)
+
+    test_dataset = create_input_features_dataset(
+        DEV2_JSON_FILENAME, DEV2_FEATURES_DIR
+    )
+    test(model, test_dataset)
