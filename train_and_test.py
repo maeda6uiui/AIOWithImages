@@ -103,7 +103,7 @@ def convert_example_to_features(example, use_cache, cache_dir):
             if os.path.exists(image_features_filename) == True:
                 image_features = torch.load(image_features_filename)
             else:
-                image_features = torch.zeros(0).cuda()
+                image_features = torch.zeros(0, dtype=torch.long).cuda()
 
             image_features_length = image_features.size()[0]
 
@@ -118,7 +118,7 @@ def convert_example_to_features(example, use_cache, cache_dir):
                 padding_length = MAX_SEQ_LENGTH - (
                     text_features_length + image_features_length
                 )
-                zero_padding = torch.zeros(padding_length).cuda()
+                zero_padding = torch.zeros(padding_length, dtype=torch.long).cuda()
                 input_ids = torch.cat([input_ids, zero_padding], dim=0)
 
                 for j in range(
@@ -128,7 +128,7 @@ def convert_example_to_features(example, use_cache, cache_dir):
 
             # token_type_idsの作成
             # テキスト: 0 画像: 1
-            token_type_ids = torch.zeros(MAX_SEQ_LENGTH).cuda()
+            token_type_ids = torch.zeros(MAX_SEQ_LENGTH, dtype=torch.long).cuda()
             for j in range(0, text_features_length):
                 token_type_ids[j] = 0
             for j in range(text_features_length, MAX_SEQ_LENGTH):
@@ -162,7 +162,8 @@ def convert_example_to_features(example, use_cache, cache_dir):
 
 def select_field(features, field):
     return [
-        [choice[field].detach().cpu().numpy() for choice in f.choices_features] for f in features
+        [choice[field].detach().cpu().numpy() for choice in f.choices_features]
+        for f in features
     ]
 
 
@@ -315,7 +316,7 @@ def test(model, test_dataset):
     accuracy = simple_accuracy(pred_ids, out_label_ids)
 
     logger.info("テストが終了しました。")
-    logger.info("損失: {}\n精度: {}".format(eval_loss, accuracy))
+    logger.info("損失: {}\n正確度: {}".format(eval_loss, accuracy))
 
 
 def simple_accuracy(preds, labels):
@@ -333,11 +334,11 @@ if __name__ == "__main__":
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
     train_dataset = create_input_features_dataset(
-        TRAIN_JSON_FILENAME, True, TRAIN_FEATURES_DIR
+        TRAIN_JSON_FILENAME, False, TRAIN_FEATURES_DIR
     )
     train(model, train_dataset)
 
     test_dataset = create_input_features_dataset(
-        DEV2_JSON_FILENAME, True, DEV2_FEATURES_DIR
+        DEV2_JSON_FILENAME, False, DEV2_FEATURES_DIR
     )
     test(model, test_dataset)
