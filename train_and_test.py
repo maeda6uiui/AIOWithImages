@@ -16,7 +16,7 @@ DEV1_FEATURES_DIR = "./Features/Dev1/"
 DEV2_FEATURES_DIR = "./Features/Dev2/"
 
 EPOCH_NUM = 5
-BATCH_SIZE = 128
+BATCH_SIZE = 8
 
 MAX_SEQ_LENGTH = 512
 
@@ -48,20 +48,6 @@ class InputFeatures(object):
             for input_ids, input_mask, segment_ids in choices_features
         ]
         self.label = label
-
-
-class InputFeaturesDataset(torch.utils.data.Dataset):
-    def __init__(self):
-        self.input_features_list = []
-
-    def append(self, input_features):
-        self.input_features_list.append(input_features)
-
-    def __len__(self):
-        return len(self.input_features_list)
-
-    def __getitem__(self, index):
-        return self.input_features_list[index]
 
 
 def load_examples(json_filename):
@@ -103,7 +89,7 @@ def convert_example_to_features(example, use_cache, cache_dir):
                 pad_to_max_length=False,
             )
 
-            input_ids = encoding["input_ids"].cuda().float()
+            input_ids = encoding["input_ids"].cuda()
             input_ids = input_ids.view(-1)
             text_features_length = input_ids.size()[0]  # input_idsのうちテキスト部分の長さ
 
@@ -117,7 +103,7 @@ def convert_example_to_features(example, use_cache, cache_dir):
             if os.path.exists(image_features_filename) == True:
                 image_features = torch.load(image_features_filename)
             else:
-                image_features = torch.zeros(0).cuda().float()
+                image_features = torch.zeros(0).cuda()
 
             image_features_length = image_features.size()[0]
 
@@ -132,7 +118,7 @@ def convert_example_to_features(example, use_cache, cache_dir):
                 padding_length = MAX_SEQ_LENGTH - (
                     text_features_length + image_features_length
                 )
-                zero_padding = torch.zeros(padding_length).cuda().float()
+                zero_padding = torch.zeros(padding_length).cuda()
                 input_ids = torch.cat([input_ids, zero_padding], dim=0)
 
                 for j in range(
@@ -174,6 +160,12 @@ def convert_example_to_features(example, use_cache, cache_dir):
     return ret
 
 
+def select_field(features, field):
+    return [
+        [choice[field].detach().cpu().numpy() for choice in f.choices_features] for f in features
+    ]
+
+
 def create_input_features_dataset(json_filename, use_cache, cache_dir):
     """
     入力特徴量のデータセットを作成します。
@@ -191,7 +183,7 @@ def create_input_features_dataset(json_filename, use_cache, cache_dir):
 
     Returns
     ----------
-    ret: InputFeaturesDataset
+    dataset: TensorDataset
         BERTモデルに入力する特徴量のデータセット
     """
 
@@ -199,14 +191,35 @@ def create_input_features_dataset(json_filename, use_cache, cache_dir):
 
     examples = load_examples(json_filename)
 
-    ret = InputFeaturesDataset()
+    features_list = []
     for example in tqdm(examples):
-        features = convert_example_to_features(example,use_cache,cache_dir)
-        ret.append(features)
+        features = convert_example_to_features(example, use_cache, cache_dir)
+        features_list.append(features)
 
     logger.info("入力特徴量の生成を完了しました。")
 
-    return ret
+    logger.info("入力する特徴量のデータセットを作成します。")
+
+    all_input_ids = torch.tensor(
+        select_field(features_list, "input_ids"), dtype=torch.long
+    ).cuda()
+    all_input_mask = torch.tensor(
+        select_field(features_list, "input_mask"), dtype=torch.long
+    ).cuda()
+    all_segment_ids = torch.tensor(
+        select_field(features_list, "segment_ids"), dtype=torch.long
+    ).cuda()
+    all_label_ids = torch.tensor(
+        [f.label for f in features_list], dtype=torch.long
+    ).cuda()
+
+    dataset = torch.utils.data.TensorDataset(
+        all_input_ids, all_input_mask, all_segment_ids, all_label_ids
+    )
+
+    logger.info("入力する特徴量のデータセットの作成が終了しました。")
+
+    return dataset
 
 
 def train(model, train_dataset):
@@ -320,11 +333,11 @@ if __name__ == "__main__":
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
     train_dataset = create_input_features_dataset(
-        TRAIN_JSON_FILENAME, False, TRAIN_FEATURES_DIR
+        TRAIN_JSON_FILENAME, True, TRAIN_FEATURES_DIR
     )
     train(model, train_dataset)
 
     test_dataset = create_input_features_dataset(
-        DEV2_JSON_FILENAME, False, DEV2_FEATURES_DIR
+        DEV2_JSON_FILENAME, True, DEV2_FEATURES_DIR
     )
     test(model, test_dataset)

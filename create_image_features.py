@@ -59,7 +59,7 @@ def get_image_info_list():
 
 
 def get_image_features(image_dir):
-    ret = torch.empty(0).cuda().float()
+    ret = torch.empty(0).cuda()
 
     files = os.listdir(image_dir)
     for file in files:
@@ -67,10 +67,10 @@ def get_image_features(image_dir):
         outputs = predictor(im)
 
         pred_classes = outputs["instances"].pred_classes
-        pred_classes = pred_classes.flatten().float()
+        pred_classes = pred_classes.flatten()
 
         pred_boxes = outputs["instances"].pred_boxes
-        box_areas = pred_boxes.area().flatten()
+        box_areas = pred_boxes.area().long().flatten()
 
         tmp = torch.cat([pred_classes, box_areas], dim=0)
         ret = torch.cat([ret, tmp], dim=0)
@@ -86,7 +86,7 @@ def create_image_features():
     os.makedirs(FEATURES_DIR, exist_ok=True)
 
     for i, image_info in enumerate(tqdm(image_info_list)):
-        image_features = torch.zeros(0).cuda().float()
+        image_features = torch.zeros(0).cuda()
         if image_info.image_dir != "":
             try:
                 image_features = get_image_features(image_info.image_dir)
