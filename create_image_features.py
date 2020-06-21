@@ -7,7 +7,6 @@ from tqdm import tqdm
 import cv2
 import detectron2
 from detectron2.utils.logger import setup_logger
-
 setup_logger()
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor
@@ -71,9 +70,9 @@ def get_image_features(image_dir):
         pred_classes = pred_classes.long().flatten()
 
         pred_boxes = outputs["instances"].pred_boxes
-        box_areas = pred_boxes.area().long().flatten()
+        box_centers = pred_boxes.get_centers().long().flatten()
 
-        tmp = torch.cat([pred_classes, box_areas], dim=0)
+        tmp = torch.cat([pred_classes, box_centers], dim=0)
         ret = torch.cat([ret, tmp], dim=0)
 
     return ret
