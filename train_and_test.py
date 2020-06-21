@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 from transformers import BertJapaneseTokenizer, BertForMultipleChoice
+from pytorch_memlab import MemReporter
 
 TRAIN_JSON_FILENAME = "./Data/train_questions.json"
 DEV1_JSON_FILENAME = "./Data/dev1_questions.json"
@@ -152,16 +153,16 @@ def create_input_features(examples, cache_dir):
 
     all_input_ids = torch.tensor(
         select_field(features_list, "input_ids"), dtype=torch.long
-    ).cpu()
+    ).cuda()
     all_input_mask = torch.tensor(
         select_field(features_list, "input_mask"), dtype=torch.long
-    ).cpu()
+    ).cuda()
     all_segment_ids = torch.tensor(
         select_field(features_list, "segment_ids"), dtype=torch.long
-    ).cpu()
+    ).cuda()
     all_label_ids = torch.tensor(
         [f.label for f in features_list], dtype=torch.long
-    ).cpu()
+    ).cuda()
 
     return all_input_ids, all_input_mask, all_segment_ids, all_label_ids
 
@@ -179,6 +180,7 @@ def create_examples_list_from_batch(batch):
 
 def train(model):
     logger.info("訓練を開始します。")
+    logger.info("バッチサイズ: {}".format(BATCH_SIZE))
 
     log_interval = 5
 
@@ -237,6 +239,7 @@ def train(model):
 
 def test(model):
     logger.info("テストを開始します。")
+    logger.info("バッチサイズ: {}".format(BATCH_SIZE))
 
     model.eval()
 
@@ -302,10 +305,16 @@ if __name__ == "__main__":
     model = BertForMultipleChoice.from_pretrained(
         "cl-tohoku/bert-base-japanese-whole-word-masking"
     )
-    model.cpu()
+    model.cuda()
 
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
-    train(model)
+    reporter=MemReporter(model)
+    reporter.report()
+    try:
+        train(model)
+    except:
+        reporter.report()
+    
     test(model)
