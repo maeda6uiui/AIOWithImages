@@ -49,14 +49,15 @@ class InputFeatures(object):
         ]
         self.label = label
 
+
 class InputExampleDataset(torch.utils.data.Dataset):
     def __init__(self):
-        self.qids=[]
-        self.questions=[]
-        self.endings=[]
-        self.labels=[]
+        self.qids = []
+        self.questions = []
+        self.endings = []
+        self.labels = []
 
-    def append(self,qid,question,ending,label):
+    def append(self, qid, question, ending, label):
         self.qids.append(qid)
         self.questions.append(question)
         self.endings.append(ending)
@@ -65,13 +66,14 @@ class InputExampleDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.qids)
 
-    def __getitem__(self,index):
-        out_qid=self.qids[index]
-        out_question=self.questions[index]
-        out_ending=self.endings[index]
-        out_label=self.labels[index]
+    def __getitem__(self, index):
+        out_qid = self.qids[index]
+        out_question = self.questions[index]
+        out_ending = self.endings[index]
+        out_label = self.labels[index]
 
-        return out_qid,out_question,out_ending,out_label
+        return out_qid, out_question, out_ending, out_label
+
 
 def load_examples(json_filename):
     examples = []
@@ -115,11 +117,12 @@ def convert_example_to_features(example, cache_dir):
 
 def select_field(features, field):
     return [
-        [choice[field].detach().cpu().numpy() for choice in f.choices_features] for f in features
+        [choice[field].detach().cpu().numpy() for choice in f.choices_features]
+        for f in features
     ]
 
 
-def create_input_features(examples,cache_dir):
+def create_input_features(examples, cache_dir):
     """
     BERTモデルへの入力特徴量を作成します。
 
@@ -144,7 +147,7 @@ def create_input_features(examples,cache_dir):
 
     features_list = []
     for example in examples:
-        features = convert_example_to_features(example,cache_dir)
+        features = convert_example_to_features(example, cache_dir)
         features_list.append(features)
 
     all_input_ids = torch.tensor(
@@ -160,15 +163,15 @@ def create_input_features(examples,cache_dir):
         [f.label for f in features_list], dtype=torch.long
     ).cpu()
 
-    return all_input_ids,all_input_mask,all_segment_ids,all_label_ids
+    return all_input_ids, all_input_mask, all_segment_ids, all_label_ids
 
 
 def create_examples_list_from_batch(batch):
-    qids,questions,endings,labels=batch
+    qids, questions, endings, labels = batch
 
-    ret=[]
+    ret = []
     for i in range(BATCH_SIZE):
-        example=InputExample(qids[i],questions[i],endings[i],labels[i])
+        example = InputExample(qids[i], questions[i], endings[i], labels[i])
         ret.append(example)
 
     return ret
@@ -182,21 +185,25 @@ def train(model):
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
     model.train()
 
-    examples=load_examples(TRAIN_JSON_FILENAME)
-    example_dataset=InputExampleDataset()
+    examples = load_examples(TRAIN_JSON_FILENAME)
+    example_dataset = InputExampleDataset()
     for example in examples:
-        example_dataset.append(example.qid,example.question,example.endings,example.label)
+        example_dataset.append(
+            example.qid, example.question, example.endings, example.label
+        )
 
-    example_dataloader=torch.utils.data.DataLoader(
+    example_dataloader = torch.utils.data.DataLoader(
         example_dataset, batch_size=BATCH_SIZE, shuffle=True
     )
 
     for epoch in range(EPOCH_NUM):
         logger.info("========== Epoch {} / {} ==========".format(epoch + 1, EPOCH_NUM))
 
-        for step,batch in enumerate(tqdm(example_dataloader)):
-            examples_list=create_examples_list_from_batch(batch)
-            input_ids,attention_mask,token_type_ids,labels=create_input_features(examples_list,TRAIN_FEATURES_DIR)
+        for step, batch in enumerate(tqdm(example_dataloader)):
+            examples_list = create_examples_list_from_batch(batch)
+            input_ids, attention_mask, token_type_ids, labels = create_input_features(
+                examples_list, TRAIN_FEATURES_DIR
+            )
             inputs = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
@@ -233,12 +240,14 @@ def test(model):
 
     model.eval()
 
-    examples=load_examples(DEV2_JSON_FILENAME)
-    example_dataset=InputExampleDataset()
+    examples = load_examples(DEV2_JSON_FILENAME)
+    example_dataset = InputExampleDataset()
     for example in examples:
-        example_dataset.append(example.qid,example.question,example.endings,example.label)
+        example_dataset.append(
+            example.qid, example.question, example.endings, example.label
+        )
 
-    example_dataloader=torch.utils.data.DataLoader(
+    example_dataloader = torch.utils.data.DataLoader(
         example_dataset, batch_size=BATCH_SIZE, shuffle=False
     )
 
@@ -248,8 +257,10 @@ def test(model):
     out_label_ids = None
     for step, batch in enumerate(tqdm(example_dataloader)):
         with torch.no_grad():
-            examples_list=create_examples_list_from_batch(batch)
-            input_ids,attention_mask,token_type_ids,labels=create_input_features(examples_list,DEV2_FEATURES_DIR)
+            examples_list = create_examples_list_from_batch(batch)
+            input_ids, attention_mask, token_type_ids, labels = create_input_features(
+                examples_list, DEV2_FEATURES_DIR
+            )
             inputs = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,

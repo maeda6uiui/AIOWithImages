@@ -24,12 +24,14 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
 
+
 class InputExample(object):
     def __init__(self, qid, question, endings, label=None):
         self.qid = qid
         self.question = question
         self.endings = endings
         self.label = label
+
 
 def load_examples(json_filename):
     examples = []
@@ -51,6 +53,7 @@ def load_examples(json_filename):
         examples.append(example)
 
     return examples
+
 
 def convert_example_to_features(example, cache_dir):
     """
@@ -84,7 +87,7 @@ def convert_example_to_features(example, cache_dir):
         if os.path.exists(image_features_filename) == True:
             image_features = torch.load(image_features_filename)
         else:
-            image_features = torch.zeros(0,dtype=torch.long).cuda()
+            image_features = torch.zeros(0, dtype=torch.long).cuda()
 
         image_features_length = image_features.size()[0]
 
@@ -99,7 +102,7 @@ def convert_example_to_features(example, cache_dir):
             padding_length = MAX_SEQ_LENGTH - (
                 text_features_length + image_features_length
             )
-            zero_padding = torch.zeros(padding_length,dtype=torch.long).cuda()
+            zero_padding = torch.zeros(padding_length, dtype=torch.long).cuda()
             input_ids = torch.cat([input_ids, zero_padding], dim=0)
 
             for j in range(
@@ -109,7 +112,7 @@ def convert_example_to_features(example, cache_dir):
 
         # token_type_idsの作成
         # テキスト: 0 画像: 1
-        token_type_ids = torch.zeros(MAX_SEQ_LENGTH,dtype=torch.long).cuda()
+        token_type_ids = torch.zeros(MAX_SEQ_LENGTH, dtype=torch.long).cuda()
         for j in range(0, text_features_length):
             token_type_ids[j] = 0
         for j in range(text_features_length, MAX_SEQ_LENGTH):
@@ -123,8 +126,9 @@ def convert_example_to_features(example, cache_dir):
         torch.save(attention_mask, directory + "attention_mask.pt")
         torch.save(token_type_ids, directory + "token_type_ids.pt")
 
-if __name__=="__main__":
-    #訓練データ
+
+if __name__ == "__main__":
+    # 訓練データ
     """
     logger.info("訓練データの特徴量の生成を開始します。")
 
@@ -135,11 +139,11 @@ if __name__=="__main__":
     logger.info("訓練データの特徴量の生成が終了しました。")
     """
 
-    #テストデータ
+    # テストデータ
     logger.info("テストデータの特徴量の生成を開始します。")
 
-    examples=load_examples(DEV2_JSON_FILENAME)
+    examples = load_examples(DEV2_JSON_FILENAME)
     for example in tqdm(examples):
-        convert_example_to_features(example,DEV2_FEATURES_DIR)
+        convert_example_to_features(example, DEV2_FEATURES_DIR)
 
     logger.info("テストデータの特徴量の生成が終了しました。")
