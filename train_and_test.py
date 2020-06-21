@@ -204,8 +204,6 @@ def train(model):
                 "labels": labels,
             }
 
-            logger.info("min: {} max: {}".format(torch.min(input_ids),torch.max(input_ids)))
-
             # 勾配の初期化
             optimizer.zero_grad()
             # 順伝播
