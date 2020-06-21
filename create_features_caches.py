@@ -129,7 +129,6 @@ def convert_example_to_features(example, cache_dir):
 
 if __name__ == "__main__":
     # 訓練データ
-    """
     logger.info("訓練データの特徴量の生成を開始します。")
 
     examples=load_examples(TRAIN_JSON_FILENAME)
@@ -137,7 +136,6 @@ if __name__ == "__main__":
         convert_example_to_features(example,TRAIN_FEATURES_DIR)
 
     logger.info("訓練データの特徴量の生成が終了しました。")
-    """
 
     # テストデータ
     logger.info("テストデータの特徴量の生成を開始します。")
