@@ -5,7 +5,12 @@ import sys
 from tqdm import tqdm
 import numpy as np
 import torch
-from transformers import BertJapaneseTokenizer, BertForMultipleChoice
+from transformers import (
+    BertJapaneseTokenizer, 
+    BertForMultipleChoice,
+    AdamW,
+    get_linear_schedule_with_warmup
+)
 
 TRAIN_JSON_FILENAME = "./Data/train_questions.json"
 DEV1_JSON_FILENAME = "./Data/dev1_questions.json"
@@ -208,11 +213,17 @@ def train(model, train_dataset):
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True
     )
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-
-    log_interval = 5
 
     model.train()
+
+    optimizer=AdamW(model.parameters(),lr=2e-5,eps=1e-8)
+    total_steps=len(train_dataloader)*EPOCH_NUM
+    scheduler=get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=0,
+        num_training_steps=total_steps)
+
+    log_interval = 5
 
     for epoch in range(EPOCH_NUM):
         logger.info("========== Epoch {} / {} ==========".format(epoch + 1, EPOCH_NUM))
@@ -227,14 +238,16 @@ def train(model, train_dataset):
             }
 
             # 勾配の初期化
-            optimizer.zero_grad()
+            model.zero_grad()
             # 順伝播
             outputs = model(**inputs)
             loss = outputs[0]
             # 逆伝播
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(),1.0)
             # パラメータの更新
             optimizer.step()
+            scheduler.step()
 
             if step % log_interval == 0:
                 logger.info(
