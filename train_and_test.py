@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import sys
 from tqdm import tqdm
 import numpy as np
 import torch
@@ -10,10 +11,12 @@ TRAIN_JSON_FILENAME = "./Data/train_questions.json"
 DEV1_JSON_FILENAME = "./Data/dev1_questions.json"
 DEV2_JSON_FILENAME = "./Data/dev2_questions.json"
 
-IMAGE_FEATURES_DIR = "./WikipediaImages/Features/"
 TRAIN_FEATURES_DIR = "./Features/Train/"
 DEV1_FEATURES_DIR = "./Features/Dev1/"
 DEV2_FEATURES_DIR = "./Features/Dev2/"
+TRAIN_ALL_FEATURES_DIR = "./AllFeatures/Train/"
+DEV1_ALL_FEATURES_DIR = "./AllFeatures/Dev1/"
+DEV2_ALL_FEATURES_DIR = "./AllFeatures/Dev2/"
 
 EPOCH_NUM = 5
 TRAIN_BATCH_SIZE = 1
@@ -27,7 +30,7 @@ tokenizer = BertJapaneseTokenizer.from_pretrained(
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(level=logging.INFO)
+logger.setLevel(level=logging.DEBUG)
 
 
 class InputExample(object):
@@ -73,7 +76,7 @@ def load_examples(json_filename):
     return examples
 
 
-def convert_example_to_features(example,cache_dir):
+def convert_example_to_features(example, cache_dir):
     choices_features = []
 
     # キャッシュファイルからTensorを読み込む。
@@ -98,16 +101,20 @@ def select_field(features, field):
     ]
 
 
-def create_input_features_dataset(json_filename, cache_dir):
+def create_input_features_dataset(json_filename, cache_dir, save_dir=""):
     """
     入力特徴量のデータセットを作成します。
+    save_dirに空文字列以外を指定すると、処理後のデータをキャッシュファイルに保存します。
+    保存されたキャッシュファイルはcreate_input_features_dataset_from_cachesを用いて読み込みます。
 
     Parameters
     ----------
     json_filename: string
         読み込むJSONファイルのファイル名
     cache_dir: string
-        キャッシュファイルのディレクトリ名
+        create_features_caches.pyで作成されたキャッシュファイルのディレクトリ名
+    save_dir: string
+        キャッシュファイルを保存するディレクトリ名
 
     Returns
     ----------
@@ -145,6 +152,50 @@ def create_input_features_dataset(json_filename, cache_dir):
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
     )
 
+    logger.debug("all_input_ids: {}".format(all_input_ids.size()))
+    logger.debug("all_input_mask: {}".format(all_input_mask.size()))
+    logger.debug("all_segment_ids: {}".format(all_segment_ids.size()))
+    logger.debug("all_label_ids: {}".format(all_label_ids.size()))
+
+    if save_dir != "":
+        os.makedirs(save_dir, exist_ok=True)
+
+        torch.save(all_input_ids, save_dir + "all_input_ids.pt")
+        torch.save(all_input_mask, save_dir + "all_input_mask.pt")
+        torch.save(all_segment_ids, save_dir + "all_segment_ids.pt")
+        torch.save(all_label_ids, save_dir + "all_label_ids.pt")
+
+    logger.info("入力する特徴量のデータセットの作成が終了しました。")
+
+    return dataset
+
+
+def create_input_features_dataset_from_caches(cache_dir):
+    """
+    キャッシュファイルを読み込み、入力特徴量のデータセットを作成します。
+
+    Parameters
+    ----------
+    cache_dir: string
+        キャッシュファイルのディレクトリ名
+
+    Returns
+    ----------
+    dataset: TensorDataset
+        BERTモデルに入力する特徴量のデータセット
+    """
+
+    logger.info("入力する特徴量のデータセットを作成します。")
+
+    all_input_ids = torch.load(cache_dir + "all_input_ids.pt")
+    all_input_mask = torch.load(cache_dir + "all_input_mask.pt")
+    all_segment_ids = torch.load(cache_dir + "all_segment_ids.pt")
+    all_label_ids = torch.load(cache_dir + "all_label_ids.pt")
+
+    dataset = torch.utils.data.TensorDataset(
+        all_input_ids, all_input_mask, all_segment_ids, all_label_ids
+    )
+
     logger.info("入力する特徴量のデータセットの作成が終了しました。")
 
     return dataset
@@ -153,6 +204,9 @@ def create_input_features_dataset(json_filename, cache_dir):
 def train(model, train_dataset):
     logger.info("訓練を開始します。")
     logger.info("バッチサイズ: {}".format(TRAIN_BATCH_SIZE))
+
+    logger.debug("訓練開始時のメモリ割当情報")
+    output_memory_allocation_info()
 
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True
@@ -175,11 +229,20 @@ def train(model, train_dataset):
                 "labels": batch[3],
             }
 
+            logger.debug("step {}のメモリ割当情報 (forward計算前)".format(step))
+            output_memory_allocation_info()
+
             # 勾配の初期化
             optimizer.zero_grad()
             # 順伝播
             outputs = model(**inputs)
             loss = outputs[0]
+
+            torch.cuda.empty_cache()
+
+            logger.debug("step {}のメモリ割当情報 (forward計算後)".format(step))
+            output_memory_allocation_info()
+
             # 逆伝播
             loss.backward()
             # パラメータの更新
@@ -203,6 +266,9 @@ def test(model, test_dataset):
     logger.info("テストを開始します。")
     logger.info("バッチサイズ: {}".format(TEST_BATCH_SIZE))
 
+    logger.debug("テスト開始時のメモリ割当情報")
+    output_memory_allocation_info()
+
     test_dataloader = torch.utils.data.DataLoader(
         test_dataset, batch_size=TEST_BATCH_SIZE, shuffle=False
     )
@@ -225,6 +291,8 @@ def test(model, test_dataset):
 
             outputs = model(**inputs)
             tmp_eval_loss, logits = outputs[:2]
+
+            torch.cuda.empty_cache()
 
             eval_loss += tmp_eval_loss.mean().item()
 
@@ -252,12 +320,27 @@ def simple_accuracy(preds, labels):
     return (preds == labels).mean()
 
 
+def output_memory_allocation_info():
+    logger.debug(
+        "Current memory allocated: {} MB".format(
+            torch.cuda.memory_allocated() / 1024 ** 2
+        )
+    )
+    logger.debug("Cached memory: {} MB".format(torch.cuda.memory_cached() / 1024 ** 2))
+
+
 if __name__ == "__main__":
+    logger.debug("プログラム開始時のメモリ割当情報")
+    output_memory_allocation_info()
+
     # モデルの作成
     model = BertForMultipleChoice.from_pretrained(
         "cl-tohoku/bert-base-japanese-whole-word-masking"
     )
     model.cuda()
+
+    logger.debug("モデル作成後のメモリ割当情報")
+    output_memory_allocation_info()
 
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
@@ -267,7 +350,5 @@ if __name__ == "__main__":
     )
     train(model, train_dataset)
 
-    test_dataset = create_input_features_dataset(
-        DEV2_JSON_FILENAME, DEV2_FEATURES_DIR
-    )
+    test_dataset = create_input_features_dataset(DEV2_JSON_FILENAME, DEV2_FEATURES_DIR)
     test(model, test_dataset)
