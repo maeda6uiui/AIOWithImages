@@ -24,7 +24,7 @@ DEV1_ALL_FEATURES_DIR = "./AllFeatures/Dev1/"
 DEV2_ALL_FEATURES_DIR = "./AllFeatures/Dev2/"
 
 EPOCH_NUM = 5
-TRAIN_BATCH_SIZE = 1
+TRAIN_BATCH_SIZE = 4
 TEST_BATCH_SIZE = 4
 
 MAX_SEQ_LENGTH = 512
@@ -157,11 +157,6 @@ def create_input_features_dataset(json_filename, cache_dir, save_dir=""):
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
     )
 
-    logger.debug("all_input_ids: {}".format(all_input_ids.size()))
-    logger.debug("all_input_mask: {}".format(all_input_mask.size()))
-    logger.debug("all_segment_ids: {}".format(all_segment_ids.size()))
-    logger.debug("all_label_ids: {}".format(all_label_ids.size()))
-
     if save_dir != "":
         os.makedirs(save_dir, exist_ok=True)
 
@@ -197,6 +192,12 @@ def create_input_features_dataset_from_caches(cache_dir):
     all_segment_ids = torch.load(cache_dir + "all_segment_ids.pt")
     all_label_ids = torch.load(cache_dir + "all_label_ids.pt")
 
+    #tensorがメモリに乗らないので、サイズを小さくする。
+    SIZE=128
+    all_input_ids=all_input_ids[:,:,:SIZE]
+    all_input_mask=all_input_mask[:,:,:SIZE]
+    all_segment_ids=all_segment_ids[:,:,:SIZE]
+
     dataset = torch.utils.data.TensorDataset(
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
     )
@@ -223,7 +224,7 @@ def train(model, train_dataset):
         num_warmup_steps=0,
         num_training_steps=total_steps)
 
-    log_interval = 5
+    log_interval = 100
 
     for epoch in range(EPOCH_NUM):
         logger.info("========== Epoch {} / {} ==========".format(epoch + 1, EPOCH_NUM))
@@ -250,11 +251,7 @@ def train(model, train_dataset):
             scheduler.step()
 
             if step % log_interval == 0:
-                logger.info(
-                    "進捗: {:.2f} %\t損失: {}".format(
-                        step * len(batch) / len(train_dataloader), loss.item()
-                    )
-                )
+                logger.info("損失: {}".format(loss.item()))
 
     torch.save(model.state_dict(), "./pytorch_model.bin")
 
@@ -335,7 +332,5 @@ if __name__ == "__main__":
     train_dataset = create_input_features_dataset_from_caches(TRAIN_ALL_FEATURES_DIR)
     train(model, train_dataset)
 
-    test_dataset = create_input_features_dataset(
-        DEV2_JSON_FILENAME, DEV2_FEATURES_DIR, DEV2_ALL_FEATURES_DIR
-    )
+    test_dataset = create_input_features_dataset_from_caches(DEV2_ALL_FEATURES_DIR)
     test(model, test_dataset)
