@@ -346,9 +346,11 @@ if __name__ == "__main__":
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
     train_dataset = create_input_features_dataset(
-        TRAIN_JSON_FILENAME, TRAIN_FEATURES_DIR
+        TRAIN_JSON_FILENAME, TRAIN_FEATURES_DIR, TRAIN_ALL_FEATURES_DIR
     )
     train(model, train_dataset)
 
-    test_dataset = create_input_features_dataset(DEV2_JSON_FILENAME, DEV2_FEATURES_DIR)
+    test_dataset = create_input_features_dataset(
+        DEV2_JSON_FILENAME, DEV2_FEATURES_DIR, DEV2_ALL_FEATURES_DIR
+    )
     test(model, test_dataset)
