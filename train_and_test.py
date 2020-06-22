@@ -30,7 +30,7 @@ tokenizer = BertJapaneseTokenizer.from_pretrained(
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(level=logging.DEBUG)
+logger.setLevel(level=logging.INFO)
 
 
 class InputExample(object):
@@ -205,9 +205,6 @@ def train(model, train_dataset):
     logger.info("訓練を開始します。")
     logger.info("バッチサイズ: {}".format(TRAIN_BATCH_SIZE))
 
-    logger.debug("訓練開始時のメモリ割当情報")
-    output_memory_allocation_info()
-
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True
     )
@@ -229,26 +226,15 @@ def train(model, train_dataset):
                 "labels": batch[3],
             }
 
-            logger.debug("step {}のメモリ割当情報 (forward計算前)".format(step))
-            output_memory_allocation_info()
-
             # 勾配の初期化
             optimizer.zero_grad()
             # 順伝播
             outputs = model(**inputs)
             loss = outputs[0]
-
-            torch.cuda.empty_cache()
-
-            logger.debug("step {}のメモリ割当情報 (forward計算後)".format(step))
-            output_memory_allocation_info()
-
             # 逆伝播
             loss.backward()
             # パラメータの更新
             optimizer.step()
-
-            model.zero_grad()
 
             if step % log_interval == 0:
                 logger.info(
@@ -265,9 +251,6 @@ def train(model, train_dataset):
 def test(model, test_dataset):
     logger.info("テストを開始します。")
     logger.info("バッチサイズ: {}".format(TEST_BATCH_SIZE))
-
-    logger.debug("テスト開始時のメモリ割当情報")
-    output_memory_allocation_info()
 
     test_dataloader = torch.utils.data.DataLoader(
         test_dataset, batch_size=TEST_BATCH_SIZE, shuffle=False
@@ -291,9 +274,6 @@ def test(model, test_dataset):
 
             outputs = model(**inputs)
             tmp_eval_loss, logits = outputs[:2]
-
-            torch.cuda.empty_cache()
-
             eval_loss += tmp_eval_loss.mean().item()
 
         nb_eval_steps += 1
@@ -330,24 +310,16 @@ def output_memory_allocation_info():
 
 
 if __name__ == "__main__":
-    logger.debug("プログラム開始時のメモリ割当情報")
-    output_memory_allocation_info()
-
     # モデルの作成
     model = BertForMultipleChoice.from_pretrained(
         "cl-tohoku/bert-base-japanese-whole-word-masking"
     )
     model.cuda()
 
-    logger.debug("モデル作成後のメモリ割当情報")
-    output_memory_allocation_info()
-
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
-    train_dataset = create_input_features_dataset(
-        TRAIN_JSON_FILENAME, TRAIN_FEATURES_DIR, TRAIN_ALL_FEATURES_DIR
-    )
+    train_dataset = create_input_features_dataset_from_caches(TRAIN_ALL_FEATURES_DIR)
     train(model, train_dataset)
 
     test_dataset = create_input_features_dataset(
