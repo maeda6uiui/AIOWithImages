@@ -23,7 +23,7 @@ TRAIN_ALL_FEATURES_DIR = "./AllFeatures/Train/"
 DEV1_ALL_FEATURES_DIR = "./AllFeatures/Dev1/"
 DEV2_ALL_FEATURES_DIR = "./AllFeatures/Dev2/"
 
-EPOCH_NUM = 5
+EPOCH_NUM = 3
 TRAIN_BATCH_SIZE = 1
 TEST_BATCH_SIZE = 4
 
@@ -167,6 +167,9 @@ def create_input_features_dataset(json_filename, cache_dir, save_dir=""):
     all_input_mask = all_input_mask[:, :, :INPUT_SEQ_LENGTH]
     all_segment_ids = all_segment_ids[:, :, :INPUT_SEQ_LENGTH]
 
+    # clamp
+    all_input_ids = torch.clamp(all_input_ids, 0, len(tokenizer) - 1)
+
     dataset = torch.utils.data.TensorDataset(
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
     )
@@ -202,6 +205,9 @@ def create_input_features_dataset_from_caches(cache_dir):
     all_input_ids = all_input_ids[:, :, :INPUT_SEQ_LENGTH]
     all_input_mask = all_input_mask[:, :, :INPUT_SEQ_LENGTH]
     all_segment_ids = all_segment_ids[:, :, :INPUT_SEQ_LENGTH]
+
+    # clamp
+    all_input_ids = torch.clamp(all_input_ids, 0, len(tokenizer) - 1)
 
     dataset = torch.utils.data.TensorDataset(
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
@@ -333,8 +339,12 @@ if __name__ == "__main__":
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
+    # train_dataset=create_input_features_dataset(TRAIN_JSON_FILENAME,TRAIN_FEATURES_DIR,TRAIN_ALL_FEATURES_DIR)
     train_dataset = create_input_features_dataset_from_caches(TRAIN_ALL_FEATURES_DIR)
     train(model, train_dataset)
 
-    test_dataset = create_input_features_dataset_from_caches(DEV2_ALL_FEATURES_DIR)
+    test_dataset = create_input_features_dataset(
+        DEV2_JSON_FILENAME, DEV2_FEATURES_DIR, DEV2_ALL_FEATURES_DIR
+    )
+    # test_dataset = create_input_features_dataset_from_caches(DEV2_ALL_FEATURES_DIR)
     test(model, test_dataset)
