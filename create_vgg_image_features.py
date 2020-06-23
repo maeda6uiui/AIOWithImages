@@ -62,11 +62,11 @@ def get_image_features(image_dir):
     for file in files:
         try:
             img = Image.open(image_dir + file)
+            img = img.convert("RGB")
         except:
-            logger.error("Failed to open {}.".format(image_dir+file))
+            logger.error(image_dir+file)
             continue
 
-        img = img.convert("RGB")
         img_tensor = preprocess(img)
         img_tensor = img_tensor.unsqueeze(0)
 
@@ -89,6 +89,9 @@ def create_image_features():
     os.makedirs(FEATURES_DIR, exist_ok=True)
 
     for i, image_info in enumerate(tqdm(image_info_list)):
+        if i<9240:
+            continue
+
         image_features = torch.zeros(0, dtype=torch.long).cuda()
         if image_info.image_dir != "":
             try:
