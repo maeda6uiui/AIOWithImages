@@ -6,10 +6,10 @@ from tqdm import tqdm
 import numpy as np
 import torch
 from transformers import (
-    BertJapaneseTokenizer, 
+    BertJapaneseTokenizer,
     BertForMultipleChoice,
     AdamW,
-    get_linear_schedule_with_warmup
+    get_linear_schedule_with_warmup,
 )
 
 TRAIN_JSON_FILENAME = "./Data/train_questions.json"
@@ -24,10 +24,11 @@ DEV1_ALL_FEATURES_DIR = "./AllFeatures/Dev1/"
 DEV2_ALL_FEATURES_DIR = "./AllFeatures/Dev2/"
 
 EPOCH_NUM = 5
-TRAIN_BATCH_SIZE = 4
+TRAIN_BATCH_SIZE = 1
 TEST_BATCH_SIZE = 4
 
 MAX_SEQ_LENGTH = 512
+INPUT_SEQ_LENGTH = 256
 
 tokenizer = BertJapaneseTokenizer.from_pretrained(
     "cl-tohoku/bert-base-japanese-whole-word-masking"
@@ -153,10 +154,6 @@ def create_input_features_dataset(json_filename, cache_dir, save_dir=""):
         [f.label for f in features_list], dtype=torch.long
     ).cuda()
 
-    dataset = torch.utils.data.TensorDataset(
-        all_input_ids, all_input_mask, all_segment_ids, all_label_ids
-    )
-
     if save_dir != "":
         os.makedirs(save_dir, exist_ok=True)
 
@@ -164,6 +161,15 @@ def create_input_features_dataset(json_filename, cache_dir, save_dir=""):
         torch.save(all_input_mask, save_dir + "all_input_mask.pt")
         torch.save(all_segment_ids, save_dir + "all_segment_ids.pt")
         torch.save(all_label_ids, save_dir + "all_label_ids.pt")
+
+    # tensorがメモリに乗らないので、サイズを小さくする。
+    all_input_ids = all_input_ids[:, :, :INPUT_SEQ_LENGTH]
+    all_input_mask = all_input_mask[:, :, :INPUT_SEQ_LENGTH]
+    all_segment_ids = all_segment_ids[:, :, :INPUT_SEQ_LENGTH]
+
+    dataset = torch.utils.data.TensorDataset(
+        all_input_ids, all_input_mask, all_segment_ids, all_label_ids
+    )
 
     logger.info("入力する特徴量のデータセットの作成が終了しました。")
 
@@ -192,11 +198,10 @@ def create_input_features_dataset_from_caches(cache_dir):
     all_segment_ids = torch.load(cache_dir + "all_segment_ids.pt")
     all_label_ids = torch.load(cache_dir + "all_label_ids.pt")
 
-    #tensorがメモリに乗らないので、サイズを小さくする。
-    SIZE=128
-    all_input_ids=all_input_ids[:,:,:SIZE]
-    all_input_mask=all_input_mask[:,:,:SIZE]
-    all_segment_ids=all_segment_ids[:,:,:SIZE]
+    # tensorがメモリに乗らないので、サイズを小さくする。
+    all_input_ids = all_input_ids[:, :, :INPUT_SEQ_LENGTH]
+    all_input_mask = all_input_mask[:, :, :INPUT_SEQ_LENGTH]
+    all_segment_ids = all_segment_ids[:, :, :INPUT_SEQ_LENGTH]
 
     dataset = torch.utils.data.TensorDataset(
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
@@ -217,12 +222,11 @@ def train(model, train_dataset):
 
     model.train()
 
-    optimizer=AdamW(model.parameters(),lr=2e-5,eps=1e-8)
-    total_steps=len(train_dataloader)*EPOCH_NUM
-    scheduler=get_linear_schedule_with_warmup(
-        optimizer,
-        num_warmup_steps=0,
-        num_training_steps=total_steps)
+    optimizer = AdamW(model.parameters(), lr=2e-5, eps=1e-8)
+    total_steps = len(train_dataloader) * EPOCH_NUM
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer, num_warmup_steps=0, num_training_steps=total_steps
+    )
 
     log_interval = 100
 
@@ -245,7 +249,7 @@ def train(model, train_dataset):
             loss = outputs[0]
             # 逆伝播
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(),1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             # パラメータの更新
             optimizer.step()
             scheduler.step()
