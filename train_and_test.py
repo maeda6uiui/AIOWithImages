@@ -228,7 +228,7 @@ def train(model, train_dataset):
 
     model.train()
 
-    lr = 0.01
+    lr = 1E-3
     logger.info("lr = {}".format(lr))
 
     optimizer = AdamW(model.parameters(), lr=lr)
