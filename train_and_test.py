@@ -228,7 +228,7 @@ def train(model, train_dataset):
 
     model.train()
 
-    optimizer = AdamW(model.parameters(), lr=2e-5, eps=1e-8)
+    optimizer = AdamW(model.parameters(), lr=5e-5, eps=1e-8)
     total_steps = len(train_dataloader) * EPOCH_NUM
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=0, num_training_steps=total_steps
@@ -249,7 +249,7 @@ def train(model, train_dataset):
             }
 
             # 勾配の初期化
-            model.zero_grad()
+            optimizer.zero_grad()
             # 順伝播
             outputs = model(**inputs)
             loss = outputs[0]
@@ -259,6 +259,8 @@ def train(model, train_dataset):
             # パラメータの更新
             optimizer.step()
             scheduler.step()
+
+            model.zero_grad()
 
             if step % log_interval == 0:
                 logger.info("損失: {}".format(loss.item()))
