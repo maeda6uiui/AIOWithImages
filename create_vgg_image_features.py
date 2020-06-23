@@ -89,9 +89,6 @@ def create_image_features():
     os.makedirs(FEATURES_DIR, exist_ok=True)
 
     for i, image_info in enumerate(tqdm(image_info_list)):
-        if i<9240:
-            continue
-
         image_features = torch.zeros(0, dtype=torch.long).cuda()
         if image_info.image_dir != "":
             try:
