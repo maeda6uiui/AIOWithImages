@@ -228,7 +228,10 @@ def train(model, train_dataset):
 
     model.train()
 
-    optimizer = AdamW(model.parameters(), lr=5e-5, eps=1e-8)
+    lr = 0.01
+    logger.info("lr = {}".format(lr))
+
+    optimizer = AdamW(model.parameters(), lr=lr)
     total_steps = len(train_dataloader) * EPOCH_NUM
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=0, num_training_steps=total_steps
