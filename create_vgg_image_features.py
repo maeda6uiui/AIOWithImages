@@ -6,18 +6,21 @@ import torchvision
 from tqdm import tqdm
 from PIL import Image
 
-vgg16=torchvision.models.vgg16(pretrained=True)
+vgg16 = torchvision.models.vgg16(pretrained=True)
 vgg16.eval()
+vgg16.classifier[6] = torch.nn.Linear(4096, 50)
 
 normalize = torchvision.transforms.Normalize(
-    mean=[0.485, 0.456, 0.406],
-    std=[0.229, 0.224, 0.225])
-preprocess = torchvision.transforms.Compose([
-    torchvision.transforms.Resize(256),
-    torchvision.transforms.CenterCrop(224),
-    torchvision.transforms.ToTensor(),
-    normalize
-])
+    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+)
+preprocess = torchvision.transforms.Compose(
+    [
+        torchvision.transforms.Resize(256),
+        torchvision.transforms.CenterCrop(224),
+        torchvision.transforms.ToTensor(),
+        normalize,
+    ]
+)
 
 IMAGE_DIR = "./WikipediaImages/Images/"
 FEATURES_DIR = "./WikipediaImages/Features/"
@@ -28,6 +31,7 @@ df = pd.read_table("./WikipediaImages/article_list.txt", header=None)
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
+
 
 class ImageInfo(object):
     def __init__(self, image_dir, article_name):
@@ -50,24 +54,27 @@ def get_image_info_list():
 
     return ret
 
+
 def get_image_features(image_dir):
     ret = torch.empty(0, dtype=torch.long).cuda()
 
     files = os.listdir(image_dir)
     for file in files:
-        img=Image.open(image_dir+file)
-        img_tensor=preprocess(img)
-        img_tensor=img_tensor.unsqueeze(0)
+        img = Image.open(image_dir + file)
+        img = img.convert("RGB")
+        img_tensor = preprocess(img)
+        img_tensor = img_tensor.unsqueeze(0)
 
-        features_tensor=vgg16(img_tensor)
+        features_tensor = vgg16(img_tensor)
 
-        SCALE=1000
-        features_tensor=(features_tensor-torch.min(features_tensor))*SCALE
-        features_tensor=features_tensor.long().flatten().cuda()
+        SCALE = 10000
+        features_tensor = (features_tensor - torch.min(features_tensor)) * SCALE
+        features_tensor = features_tensor.long().flatten().cuda()
 
-        ret=torch.cat([ret,features_tensor],dim=0)
+        ret = torch.cat([ret, features_tensor], dim=0)
 
     return ret
+
 
 def create_image_features():
     logger.info("画像特徴量の生成を開始しました。")
@@ -91,6 +98,6 @@ def create_image_features():
 
     logger.info("画像特徴量の生成を終了しました。")
 
-if __name__=="__main__":
-    create_image_features()
 
+if __name__ == "__main__":
+    create_image_features()
