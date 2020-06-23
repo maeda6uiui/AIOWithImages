@@ -73,7 +73,7 @@ def get_image_features(image_dir):
         features_tensor = vgg16(img_tensor)
 
         SCALE = 10000
-        features_tensor = (features_tensor - torch.min(features_tensor)) * SCALE
+        features_tensor = (features_tensor + 1.0) * SCALE
         features_tensor = features_tensor.long().flatten().cuda()
 
         ret = torch.cat([ret, features_tensor], dim=0)
