@@ -60,7 +60,12 @@ def get_image_features(image_dir):
 
     files = os.listdir(image_dir)
     for file in files:
-        img = Image.open(image_dir + file)
+        try:
+            img = Image.open(image_dir + file)
+        except:
+            logger.error("Failed to open {}.".format(image_dir+file))
+            continue
+
         img = img.convert("RGB")
         img_tensor = preprocess(img)
         img_tensor = img_tensor.unsqueeze(0)
