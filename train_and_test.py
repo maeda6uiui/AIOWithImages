@@ -228,10 +228,12 @@ def train(model, train_dataset):
 
     model.train()
 
-    lr = 1E-3
+    lr = 2e-5
+    eps = 1e-8
     logger.info("lr = {}".format(lr))
+    logger.info("eps = {}".format(eps))
 
-    optimizer = AdamW(model.parameters(), lr=lr)
+    optimizer = AdamW(model.parameters(), lr=lr, eps=eps)
     total_steps = len(train_dataloader) * EPOCH_NUM
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=0, num_training_steps=total_steps
@@ -344,10 +346,14 @@ if __name__ == "__main__":
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
-    train_dataset=create_input_features_dataset(TRAIN_JSON_FILENAME,TRAIN_FEATURES_DIR,TRAIN_ALL_FEATURES_DIR)
-    #train_dataset = create_input_features_dataset_from_caches(TRAIN_ALL_FEATURES_DIR)
+    train_dataset = create_input_features_dataset(
+        TRAIN_JSON_FILENAME, TRAIN_FEATURES_DIR, TRAIN_ALL_FEATURES_DIR
+    )
+    # train_dataset = create_input_features_dataset_from_caches(TRAIN_ALL_FEATURES_DIR)
     train(model, train_dataset)
 
-    test_dataset = create_input_features_dataset(DEV2_JSON_FILENAME, DEV2_FEATURES_DIR, DEV2_ALL_FEATURES_DIR)
-    #test_dataset = create_input_features_dataset_from_caches(DEV2_ALL_FEATURES_DIR)
+    test_dataset = create_input_features_dataset(
+        DEV2_JSON_FILENAME, DEV2_FEATURES_DIR, DEV2_ALL_FEATURES_DIR
+    )
+    # test_dataset = create_input_features_dataset_from_caches(DEV2_ALL_FEATURES_DIR)
     test(model, test_dataset)
