@@ -78,7 +78,7 @@ def convert_example_to_features(example, cache_dir):
         text_features_length = input_ids.size()[0]  # input_idsのうちテキスト部分の長さ
 
         # 画像の特徴量を読み込む。
-        article_name = example.endings[example.label]
+        article_name = example.endings[i]
         image_features_filename = (
             IMAGE_FEATURES_DIR + article_name + "/" + "image_features.pt"
         )
