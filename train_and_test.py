@@ -24,11 +24,11 @@ DEV1_ALL_FEATURES_DIR = "./AllFeatures/Dev1/"
 DEV2_ALL_FEATURES_DIR = "./AllFeatures/Dev2/"
 
 EPOCH_NUM = 3
-TRAIN_BATCH_SIZE = 1
+TRAIN_BATCH_SIZE = 2
 TEST_BATCH_SIZE = 4
 
 MAX_SEQ_LENGTH = 512
-INPUT_SEQ_LENGTH = 256
+INPUT_SEQ_LENGTH = 200
 
 tokenizer = BertJapaneseTokenizer.from_pretrained(
     "cl-tohoku/bert-base-japanese-whole-word-masking"
@@ -228,7 +228,7 @@ def train(model, train_dataset):
 
     model.train()
 
-    lr = 2e-5
+    lr = 5e-5
     eps = 1e-8
     logger.info("lr = {}".format(lr))
     logger.info("eps = {}".format(eps))
@@ -346,14 +346,18 @@ if __name__ == "__main__":
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
+    """
     train_dataset = create_input_features_dataset(
         TRAIN_JSON_FILENAME, TRAIN_FEATURES_DIR, TRAIN_ALL_FEATURES_DIR
     )
-    # train_dataset = create_input_features_dataset_from_caches(TRAIN_ALL_FEATURES_DIR)
+    """
+    train_dataset = create_input_features_dataset_from_caches(TRAIN_ALL_FEATURES_DIR)
     train(model, train_dataset)
 
+    """
     test_dataset = create_input_features_dataset(
         DEV2_JSON_FILENAME, DEV2_FEATURES_DIR, DEV2_ALL_FEATURES_DIR
     )
-    # test_dataset = create_input_features_dataset_from_caches(DEV2_ALL_FEATURES_DIR)
+    """
+    test_dataset = create_input_features_dataset_from_caches(DEV2_ALL_FEATURES_DIR)
     test(model, test_dataset)
