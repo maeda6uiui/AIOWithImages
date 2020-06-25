@@ -99,8 +99,7 @@ def select_field(features, field):
 
 def create_input_features_dataset(json_filename, cache_dir, save_dir):
     """
-    入力特徴量のデータセットを作成します。
-    save_dirに空文字列以外を指定すると、処理後のデータをキャッシュファイルに保存します。
+    入力特徴量のキャッシュファイルを作成します。
     保存されたキャッシュファイルはcreate_input_features_dataset_from_cachesを用いて読み込みます。
 
     Parameters
@@ -124,7 +123,7 @@ def create_input_features_dataset(json_filename, cache_dir, save_dir):
 
     logger.info("入力特徴量の生成を完了しました。")
 
-    logger.info("入力する特徴量のデータセットを作成します。")
+    logger.info("入力する特徴量のtensorを作成します。")
 
     all_input_ids = torch.tensor(
         select_field(features_list, "input_ids"), dtype=torch.long
@@ -146,7 +145,7 @@ def create_input_features_dataset(json_filename, cache_dir, save_dir):
     torch.save(all_segment_ids, save_dir + "all_segment_ids.pt")
     torch.save(all_label_ids, save_dir + "all_label_ids.pt")
 
-    logger.info("入力する特徴量のデータセットの作成が終了しました。")
+    logger.info("入力する特徴量のtensorの作成が終了しました。")
 
 if __name__=="__main__":
     create_input_features_dataset(DEV1_JSON_FILENAME,DEV1_FEATURES_DIR,DEV1_ALL_FEATURES_DIR)
