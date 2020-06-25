@@ -55,7 +55,7 @@ def init():
 
 
 def load_baseline_dataset(cache_dir):
-    logger.info("入力する特徴量のデータセットを作成します。")
+    logger.info("ベースラインモデルに入力する特徴量のデータセットを作成します。")
 
     all_input_ids = torch.load(cache_dir + "all_input_ids.pt")
     all_input_mask = torch.load(cache_dir + "all_input_mask.pt")
@@ -66,13 +66,13 @@ def load_baseline_dataset(cache_dir):
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
     )
 
-    logger.info("入力する特徴量のデータセットの作成が終了しました。")
+    logger.info("ベースラインモデルに入力する特徴量のデータセットの作成が終了しました。")
 
     return dataset
 
 
 def load_image_dataset(cache_dir):
-    logger.info("入力する特徴量のデータセットを作成します。")
+    logger.info("画像モデルに入力する特徴量のデータセットを作成します。")
 
     all_input_ids = torch.load(cache_dir + "all_input_ids.pt")
     all_input_mask = torch.load(cache_dir + "all_input_mask.pt")
@@ -91,7 +91,7 @@ def load_image_dataset(cache_dir):
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
     )
 
-    logger.info("入力する特徴量のデータセットの作成が終了しました。")
+    logger.info("画像モデルに入力する特徴量のデータセットの作成が終了しました。")
 
     return dataset
 
@@ -166,11 +166,11 @@ def test(test_dataset, image_dataset):
         pred_index=np.argmax(logits)
 
         pred_ids.append(pred_index)
+
+    pred_ids=np.array(pred_ids)
     """
 
     pred_ids = np.argmax(preds, axis=1)
-
-    # pred_ids=np.array(pred_ids)
 
     accuracy = simple_accuracy(pred_ids, out_label_ids)
 
