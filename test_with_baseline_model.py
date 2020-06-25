@@ -21,7 +21,7 @@ TEST_BATCH_SIZE = 4
 MAX_SEQ_LENGTH = 512
 INPUT_SEQ_LENGTH = 200
 
-SCORE_THRESHOLD = 4.0
+SCORE_THRESHOLD = 3.5
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
