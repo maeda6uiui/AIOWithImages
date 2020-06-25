@@ -9,6 +9,8 @@ TRAIN_RESHAPED_FEATURES_DIR="./ReshapedFeatures/Train/"
 DEV1_RESHAPED_FEATURES_DIR="./ReshapedFeatures/Dev1/"
 DEV2_RESHAPED_FEATURES_DIR="./ReshapedFeatures/Dev2/"
 
+IMAGE_FEATURES_LENGTH=200
+
 def reshape(cache_dir,save_dir,end_index):
     all_input_ids = torch.load(cache_dir + "all_input_ids.pt")
     all_input_mask = torch.load(cache_dir + "all_input_mask.pt")
@@ -27,5 +29,6 @@ def reshape(cache_dir,save_dir,end_index):
     torch.save(all_label_ids,save_dir+"all_label_ids.pt")
 
 if __name__=="__main__":
-    reshape(TRAIN_ALL_FEATURES_DIR,TRAIN_RESHAPED_FEATURES_DIR,200)
-    reshape(DEV2_ALL_FEATURES_DIR,DEV2_RESHAPED_FEATURES_DIR,200)
+    reshape(TRAIN_ALL_FEATURES_DIR,TRAIN_RESHAPED_FEATURES_DIR,IMAGE_FEATURES_LENGTH)
+    reshape(DEV1_ALL_FEATURES_DIR,DEV1_RESHAPED_FEATURES_DIR,IMAGE_FEATURES_LENGTH)
+    reshape(DEV2_ALL_FEATURES_DIR,DEV2_RESHAPED_FEATURES_DIR,IMAGE_FEATURES_LENGTH)
