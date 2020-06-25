@@ -42,12 +42,14 @@ def init():
     )
     model.load_state_dict(torch.load(BASELINE_MODEL_FILENAME))
     model.cuda()
+    model.eval()
 
     image_model = BertForMultipleChoice.from_pretrained(
         "cl-tohoku/bert-base-japanese-whole-word-masking"
     )
     image_model.load_state_dict(torch.load(IMAGE_MODEL_FILENAME))
     image_model.cuda()
+    image_model.eval()
 
     tokenizer = BertJapaneseTokenizer.from_pretrained(
         "cl-tohoku/bert-base-japanese-whole-word-masking"
@@ -104,8 +106,6 @@ def test(test_dataset, image_dataset):
         test_dataset, batch_size=TEST_BATCH_SIZE, shuffle=False
     )
 
-    model.eval()
-
     eval_loss = 0.0
     nb_eval_steps = 0
     preds = None
@@ -135,7 +135,6 @@ def test(test_dataset, image_dataset):
                 out_label_ids, inputs["labels"].detach().cpu().numpy(), axis=0
             )
 
-    """
     #画像データを使ってテスト
     image_dataloader = torch.utils.data.DataLoader(
         image_dataset, batch_size=1, shuffle=False
@@ -168,9 +167,8 @@ def test(test_dataset, image_dataset):
         pred_ids.append(pred_index)
 
     pred_ids=np.array(pred_ids)
-    """
 
-    pred_ids = np.argmax(preds, axis=1)
+    #pred_ids = np.argmax(preds, axis=1)
 
     accuracy = simple_accuracy(pred_ids, out_label_ids)
 
