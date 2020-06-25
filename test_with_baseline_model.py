@@ -10,41 +10,49 @@ from transformers import (
     BertForMultipleChoice,
 )
 
-DEV2_BASELINE_FEATURES_DIR="./BaselineFeatures/Dev2/"
+DEV2_BASELINE_FEATURES_DIR = "./BaselineFeatures/Dev2/"
 DEV2_ALL_FEATURES_DIR = "./AllFeatures/Dev2/"
 
-BASELINE_MODEL_FILENAME="./Model/Baseline/pytorch_model.bin"
-IMAGE_MODEL_FILENAME="./Model/VGG16/pytorch_model.bin"
+BASELINE_MODEL_FILENAME = "./Model/Baseline/pytorch_model.bin"
+IMAGE_MODEL_FILENAME = "./Model/VGG16/pytorch_model.bin"
 
 TEST_BATCH_SIZE = 4
 
 MAX_SEQ_LENGTH = 512
 INPUT_SEQ_LENGTH = 200
 
-SCORE_THRESHOLD=4.0
+SCORE_THRESHOLD = 4.0
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
 
-model=None
-image_model=None
-tokenizer=None
+model = None
+image_model = None
+tokenizer = None
+
 
 def init():
     global model
     global image_model
     global tokenizer
 
-    model=BertForMultipleChoice.from_pretrained("cl-tohoku/bert-base-japanese-whole-word-masking")
+    model = BertForMultipleChoice.from_pretrained(
+        "cl-tohoku/bert-base-japanese-whole-word-masking"
+    )
     model.load_state_dict(torch.load(BASELINE_MODEL_FILENAME))
     model.cuda()
 
-    image_model=BertForMultipleChoice.from_pretrained("cl-tohoku/bert-base-japanese-whole-word-masking")
+    image_model = BertForMultipleChoice.from_pretrained(
+        "cl-tohoku/bert-base-japanese-whole-word-masking"
+    )
     image_model.load_state_dict(torch.load(IMAGE_MODEL_FILENAME))
     image_model.cuda()
 
-    tokenizer=BertJapaneseTokenizer.from_pretrained("cl-tohoku/bert-base-japanese-whole-word-masking")
+    tokenizer = BertJapaneseTokenizer.from_pretrained(
+        "cl-tohoku/bert-base-japanese-whole-word-masking"
+    )
+
 
 def load_baseline_dataset(cache_dir):
     logger.info("入力する特徴量のデータセットを作成します。")
@@ -61,6 +69,7 @@ def load_baseline_dataset(cache_dir):
     logger.info("入力する特徴量のデータセットの作成が終了しました。")
 
     return dataset
+
 
 def load_image_dataset(cache_dir):
     logger.info("入力する特徴量のデータセットを作成します。")
@@ -86,7 +95,8 @@ def load_image_dataset(cache_dir):
 
     return dataset
 
-def test(test_dataset,image_dataset):
+
+def test(test_dataset, image_dataset):
     logger.info("テストを開始します。")
     logger.info("バッチサイズ: {}".format(TEST_BATCH_SIZE))
 
@@ -124,7 +134,7 @@ def test(test_dataset,image_dataset):
             out_label_ids = np.append(
                 out_label_ids, inputs["labels"].detach().cpu().numpy(), axis=0
             )
-    
+
     """
     #画像データを使ってテスト
     image_dataloader = torch.utils.data.DataLoader(
@@ -160,7 +170,7 @@ def test(test_dataset,image_dataset):
 
     pred_ids = np.argmax(preds, axis=1)
 
-    #pred_ids=np.array(pred_ids)
+    # pred_ids=np.array(pred_ids)
 
     accuracy = simple_accuracy(pred_ids, out_label_ids)
 
@@ -171,9 +181,10 @@ def test(test_dataset,image_dataset):
 def simple_accuracy(preds, labels):
     return (preds == labels).mean()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     init()
 
-    baseline_dataset=load_baseline_dataset(DEV2_BASELINE_FEATURES_DIR)
-    image_dataset=load_image_dataset(DEV2_ALL_FEATURES_DIR)
-    test(baseline_dataset,image_dataset)
+    baseline_dataset = load_baseline_dataset(DEV2_BASELINE_FEATURES_DIR)
+    image_dataset = load_image_dataset(DEV2_ALL_FEATURES_DIR)
+    test(baseline_dataset, image_dataset)

@@ -64,7 +64,7 @@ def get_image_features(image_dir):
             img = Image.open(image_dir + file)
             img = img.convert("RGB")
         except:
-            logger.error(image_dir+file)
+            logger.error(image_dir + file)
             continue
 
         img_tensor = preprocess(img)
