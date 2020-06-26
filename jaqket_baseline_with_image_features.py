@@ -40,7 +40,7 @@ from transformers import (
 
 logger = logging.getLogger(__name__)
 
-IMAGE_FEATURES_DIR="../WikipediaImages/Features/"
+IMAGE_FEATURES_DIR = "../WikipediaImages/Features/"
 
 ###############################################################################
 ###############################################################################
@@ -278,16 +278,16 @@ def convert_examples_to_features(
                     [pad_token_segment_id] * padding_length
                 )
 
-            #Concatenate two tensors.
-            #The former is encoded text and the latter is image features.
-            #The following code works under the premise that input_ids is already fully occupied by the encoded text.
-            directory=IMAGE_FEATURES_DIR+ending+"/"
+            # Concatenate two tensors.
+            # The former is encoded text and the latter is image features.
+            # The following code works under the premise that input_ids is already fully occupied by the encoded text.
+            directory = IMAGE_FEATURES_DIR + ending + "/"
             if os.path.exists(directory):
-                im_features=torch.load(directory+"image_features.pt").cpu()
-                im_features_length=im_features.size()[0]
-                im_features=im_features.tolist()
+                im_features = torch.load(directory + "image_features.pt").cpu()
+                im_features_length = im_features.size()[0]
+                im_features = im_features.tolist()
 
-                input_ids=input_ids[:max_length-im_features_length]+im_features
+                input_ids = input_ids[: max_length - im_features_length] + im_features
 
             assert len(input_ids) == max_length
             assert len(attention_mask) == max_length
@@ -295,7 +295,6 @@ def convert_examples_to_features(
             choices_features.append((input_ids, attention_mask, token_type_ids))
 
         label = label_map[example.label]
-
 
         if ex_index < 2:
             logger.info("*** Example ***")
