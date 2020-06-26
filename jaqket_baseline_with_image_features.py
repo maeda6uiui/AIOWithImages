@@ -40,9 +40,9 @@ from transformers import (
 
 logger = logging.getLogger(__name__)
 
-TRAIN_RESHAPED_FEATURES_DIR="./ReshapedFeatures/Train/"
-DEV1_RESHAPED_FEATURES_DIR="./ReshapedFeatures/Dev1/"
-DEV2_RESHAPED_FEATURES_DIR="./ReshapedFeatures/Dev2/"
+TRAIN_RESHAPED_FEATURES_DIR="../ReshapedFeatures/Train/"
+DEV1_RESHAPED_FEATURES_DIR="../ReshapedFeatures/Dev1/"
+DEV2_RESHAPED_FEATURES_DIR="../ReshapedFeatures/Dev2/"
 
 IMAGE_FEATURES_LENGTH=200
 
@@ -795,7 +795,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     )
     all_label_ids = torch.tensor([f.label for f in features], dtype=torch.long)
 
-    all_input_ids=concat_input_tensors(all_input_ids,evaluate,test)
+    all_input_ids=concat_input_tensors(args,all_input_ids,len(tokenizer),evaluate,test)
 
     dataset = TensorDataset(
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
@@ -803,17 +803,22 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     return dataset
 
 
-def concat_input_tensors(all_input_ids,evaluate=False,test=False):
+def concat_input_tensors(args,all_input_ids,vocab_size,evaluate=False,test=False):
+    num_options=20
     im_input_ids=None
     if evaluate:
+        num_options=args.eval_num_options
         im_input_ids=torch.load(DEV1_RESHAPED_FEATURES_DIR+"all_input_ids.pt").cpu()
     elif test:
+        num_options=args.eval_num_options
         im_input_ids=torch.load(DEV2_RESHAPED_FEATURES_DIR+"all_input_ids.pt").cpu()
     else:
+        num_options=args.train_num_options
         im_input_ids=torch.load(TRAIN_RESHAPED_FEATURES_DIR+"all_input_ids.pt").cpu()
 
     length=all_input_ids.size()[2]
-    ret=torch.cat([all_input_ids[:,:,:length-IMAGE_FEATURES_LENGTH],im_input_ids],dim=2)
+    ret=torch.cat([all_input_ids[:,:,:length-IMAGE_FEATURES_LENGTH],im_input_ids[:,:num_options,:]],dim=2)
+    ret=torch.clamp(ret,0,vocab_size-1)
 
     return ret
 
