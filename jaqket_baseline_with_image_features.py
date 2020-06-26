@@ -282,8 +282,9 @@ def convert_examples_to_features(
             # The former is encoded text and the latter is image features.
             # The following code works under the premise that input_ids is already fully occupied by the encoded text.
             directory = IMAGE_FEATURES_DIR + ending + "/"
-            if os.path.exists(directory):
-                im_features = torch.load(directory + "image_features.pt").cpu()
+            im_features_filename = directory + "image_features.pt"
+            if os.path.exists(im_features_filename):
+                im_features = torch.load(im_features_filename).cpu()
                 im_features_length = im_features.size()[0]
                 im_features = im_features.tolist()
 
