@@ -40,11 +40,7 @@ from transformers import (
 
 logger = logging.getLogger(__name__)
 
-TRAIN_RESHAPED_FEATURES_DIR = "../ReshapedFeatures/Train/"
-DEV1_RESHAPED_FEATURES_DIR = "../ReshapedFeatures/Dev1/"
-DEV2_RESHAPED_FEATURES_DIR = "../ReshapedFeatures/Dev2/"
-
-IMAGE_FEATURES_LENGTH = 200
+IMAGE_FEATURES_DIR="../WikipediaImages/Features/"
 
 ###############################################################################
 ###############################################################################
@@ -282,12 +278,24 @@ def convert_examples_to_features(
                     [pad_token_segment_id] * padding_length
                 )
 
+            #Concatenate two tensors.
+            #The former is encoded text and the latter is image features.
+            #The following code works under the premise that input_ids is already fully occupied by the encoded text.
+            directory=IMAGE_FEATURES_DIR+ending+"/"
+            if os.path.exists(directory):
+                im_features=torch.load(directory+"image_features.pt").cpu()
+                im_features_length=im_features.size()[0]
+                im_features=im_features.tolist()
+
+                input_ids=input_ids[:max_length-im_features_length]+im_features
+
             assert len(input_ids) == max_length
             assert len(attention_mask) == max_length
             assert len(token_type_ids) == max_length
             choices_features.append((input_ids, attention_mask, token_type_ids))
 
         label = label_map[example.label]
+
 
         if ex_index < 2:
             logger.info("*** Example ***")
@@ -793,42 +801,10 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     )
     all_label_ids = torch.tensor([f.label for f in features], dtype=torch.long)
 
-    all_input_ids = concat_input_tensors(
-        args, all_input_ids, len(tokenizer), evaluate, test
-    )
-
     dataset = TensorDataset(
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
     )
     return dataset
-
-
-def concat_input_tensors(args, all_input_ids, vocab_size, evaluate=False, test=False):
-    num_options = 20
-    im_input_ids = None
-    if evaluate:
-        num_options = args.eval_num_options
-        im_input_ids = torch.load(DEV1_RESHAPED_FEATURES_DIR + "all_input_ids.pt").cpu()
-    elif test:
-        num_options = args.eval_num_options
-        im_input_ids = torch.load(DEV2_RESHAPED_FEATURES_DIR + "all_input_ids.pt").cpu()
-    else:
-        num_options = args.train_num_options
-        im_input_ids = torch.load(
-            TRAIN_RESHAPED_FEATURES_DIR + "all_input_ids.pt"
-        ).cpu()
-
-    length = all_input_ids.size()[2]
-    ret = torch.cat(
-        [
-            all_input_ids[:, :, : length - IMAGE_FEATURES_LENGTH],
-            im_input_ids[:, :num_options, :],
-        ],
-        dim=2,
-    )
-    ret = torch.clamp(ret, 0, vocab_size - 1)
-
-    return ret
 
 
 def main():
