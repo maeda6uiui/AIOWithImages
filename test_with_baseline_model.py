@@ -135,17 +135,17 @@ def test(test_dataset, image_dataset):
                 out_label_ids, inputs["labels"].detach().cpu().numpy(), axis=0
             )
 
-    #画像データを使ってテスト
+    # 画像データを使ってテスト
     image_dataloader = torch.utils.data.DataLoader(
         image_dataset, batch_size=1, shuffle=False
     )
 
-    pred_ids=[]
+    pred_ids = []
 
-    for step,batch in enumerate(tqdm(image_dataloader)):
-        preds_row=preds[step]
-        scores=np.sort(preds_row)[::-1]
-        if scores[0]-scores[1]>SCORE_THRESHOLD:
+    for step, batch in enumerate(tqdm(image_dataloader)):
+        preds_row = preds[step]
+        scores = np.sort(preds_row)[::-1]
+        if scores[0] - scores[1] > SCORE_THRESHOLD:
             pred_ids.append(np.argmax(preds_row))
             continue
 
@@ -158,17 +158,17 @@ def test(test_dataset, image_dataset):
         }
 
         with torch.no_grad():
-            outputs=image_model(**inputs)
-        
-        logits=outputs[1]
-        logits=logits.detach().cpu().numpy()
-        pred_index=np.argmax(logits)
+            outputs = image_model(**inputs)
+
+        logits = outputs[1]
+        logits = logits.detach().cpu().numpy()
+        pred_index = np.argmax(logits)
 
         pred_ids.append(pred_index)
 
-    pred_ids=np.array(pred_ids)
+    pred_ids = np.array(pred_ids)
 
-    #pred_ids = np.argmax(preds, axis=1)
+    # pred_ids = np.argmax(preds, axis=1)
 
     accuracy = simple_accuracy(pred_ids, out_label_ids)
 

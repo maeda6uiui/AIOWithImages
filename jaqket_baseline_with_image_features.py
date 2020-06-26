@@ -40,11 +40,11 @@ from transformers import (
 
 logger = logging.getLogger(__name__)
 
-TRAIN_RESHAPED_FEATURES_DIR="../ReshapedFeatures/Train/"
-DEV1_RESHAPED_FEATURES_DIR="../ReshapedFeatures/Dev1/"
-DEV2_RESHAPED_FEATURES_DIR="../ReshapedFeatures/Dev2/"
+TRAIN_RESHAPED_FEATURES_DIR = "../ReshapedFeatures/Train/"
+DEV1_RESHAPED_FEATURES_DIR = "../ReshapedFeatures/Dev1/"
+DEV2_RESHAPED_FEATURES_DIR = "../ReshapedFeatures/Dev2/"
 
-IMAGE_FEATURES_LENGTH=200
+IMAGE_FEATURES_LENGTH = 200
 
 ###############################################################################
 ###############################################################################
@@ -117,10 +117,7 @@ class JaqketProcessor(DataProcessor):
         logger.info("LOOKING AT {} [{}]".format(data_dir, mode))
         entities = self._get_entities(data_dir, entities_fname)
         return self._create_examples(
-            self._read_json(os.path.join(data_dir, fname)),
-            mode,
-            entities,
-            num_options,
+            self._read_json(os.path.join(data_dir, fname)), mode, entities, num_options,
         )
 
     def get_labels(self):
@@ -416,17 +413,16 @@ def train(args, train_dataset, model, tokenizer):
     t_output_dir = os.path.join(
         args.output_dir, "checkpoint-{}/".format(args.init_global_step)
     )
-    if (os.path.isfile(
-            os.path.join(t_output_dir, "optimizer.pt")) and
-        os.path.isfile(
-            os.path.join(t_output_dir, "scheduler.pt")
-        )
+    if os.path.isfile(os.path.join(t_output_dir, "optimizer.pt")) and os.path.isfile(
+        os.path.join(t_output_dir, "scheduler.pt")
     ):
         # Load in optimizer and scheduler states
         optimizer.load_state_dict(
-            torch.load(os.path.join(t_output_dir, "optimizer.pt")))
+            torch.load(os.path.join(t_output_dir, "optimizer.pt"))
+        )
         scheduler.load_state_dict(
-            torch.load(os.path.join(t_output_dir, "scheduler.pt")))
+            torch.load(os.path.join(t_output_dir, "scheduler.pt"))
+        )
     #########################################################################
 
     if args.fp16:
@@ -478,17 +474,24 @@ def train(args, train_dataset, model, tokenizer):
     if os.path.exists(t_output_dir):
         try:
             # set global_step to gobal_step of last saved checkpoint from model path
-            #checkpoint_suffix = args.model_name_or_path.split("-")[-1].split("/")[0]
+            # checkpoint_suffix = args.model_name_or_path.split("-")[-1].split("/")[0]
             global_step = args.init_global_step  # int(checkpoint_suffix)
             accum_step = args.gradient_accumulation_steps
             t_num_batch = len(train_dataloader) // accum_step
             epochs_trained = global_step // t_num_batch
-            steps_trained_in_current_epoch = (global_step * accum_step) % len(train_dataloader)
+            steps_trained_in_current_epoch = (global_step * accum_step) % len(
+                train_dataloader
+            )
 
-            logger.info("  Continuing training from checkpoint, will skip to saved global_step")
+            logger.info(
+                "  Continuing training from checkpoint, will skip to saved global_step"
+            )
             logger.info("  Continuing training from epoch %d", epochs_trained)
             logger.info("  Continuing training from global step %d", global_step)
-            logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
+            logger.info(
+                "  Will skip the first %d steps in the first epoch",
+                steps_trained_in_current_epoch,
+            )
             logger.info("  %d update per 1 epoch", t_num_batch)
         except ValueError:
             logger.info("  Starting fine-tuning.")
@@ -565,13 +568,10 @@ def train(args, train_dataset, model, tokenizer):
             ):
                 tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
                 tb_writer.add_scalar(
-                    "loss",
-                    (tr_loss - logging_loss) / args.logging_steps,
-                    global_step,
+                    "loss", (tr_loss - logging_loss) / args.logging_steps, global_step,
                 )
                 logger.info(
-                    "Ave.loss: %12.6f Accum.loss %12.6f "
-                    "#upd: %5d #iter: %7d lr: %s",
+                    "Ave.loss: %12.6f Accum.loss %12.6f " "#upd: %5d #iter: %7d lr: %s",
                     (tr_loss - logging_loss) / args.logging_steps,
                     (loss_epoch / max(1, (global_step - upd_epoch))),
                     global_step,
@@ -600,14 +600,12 @@ def train(args, train_dataset, model, tokenizer):
                 torch.save(args, os.path.join(output_dir, "training_args.bin"))
                 logger.info("Saving model checkpoint to %s", output_dir)
                 torch.save(
-                    optimizer.state_dict(), os.path.join(
-                        output_dir, "optimizer.pt"))
+                    optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt")
+                )
                 torch.save(
-                    scheduler.state_dict(), os.path.join(
-                        output_dir, "scheduler.pt"))
-                logger.info(
-                    "Saving optimizer and scheduler states to %s", 
-                    output_dir)
+                    scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt")
+                )
+                logger.info("Saving optimizer and scheduler states to %s", output_dir)
             # save model END
             if args.max_steps > 0 and global_step > args.max_steps:
                 epoch_iterator.close()
@@ -795,7 +793,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     )
     all_label_ids = torch.tensor([f.label for f in features], dtype=torch.long)
 
-    all_input_ids=concat_input_tensors(args,all_input_ids,len(tokenizer),evaluate,test)
+    all_input_ids = concat_input_tensors(
+        args, all_input_ids, len(tokenizer), evaluate, test
+    )
 
     dataset = TensorDataset(
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
@@ -803,22 +803,30 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     return dataset
 
 
-def concat_input_tensors(args,all_input_ids,vocab_size,evaluate=False,test=False):
-    num_options=20
-    im_input_ids=None
+def concat_input_tensors(args, all_input_ids, vocab_size, evaluate=False, test=False):
+    num_options = 20
+    im_input_ids = None
     if evaluate:
-        num_options=args.eval_num_options
-        im_input_ids=torch.load(DEV1_RESHAPED_FEATURES_DIR+"all_input_ids.pt").cpu()
+        num_options = args.eval_num_options
+        im_input_ids = torch.load(DEV1_RESHAPED_FEATURES_DIR + "all_input_ids.pt").cpu()
     elif test:
-        num_options=args.eval_num_options
-        im_input_ids=torch.load(DEV2_RESHAPED_FEATURES_DIR+"all_input_ids.pt").cpu()
+        num_options = args.eval_num_options
+        im_input_ids = torch.load(DEV2_RESHAPED_FEATURES_DIR + "all_input_ids.pt").cpu()
     else:
-        num_options=args.train_num_options
-        im_input_ids=torch.load(TRAIN_RESHAPED_FEATURES_DIR+"all_input_ids.pt").cpu()
+        num_options = args.train_num_options
+        im_input_ids = torch.load(
+            TRAIN_RESHAPED_FEATURES_DIR + "all_input_ids.pt"
+        ).cpu()
 
-    length=all_input_ids.size()[2]
-    ret=torch.cat([all_input_ids[:,:,:length-IMAGE_FEATURES_LENGTH],im_input_ids[:,:num_options,:]],dim=2)
-    ret=torch.clamp(ret,0,vocab_size-1)
+    length = all_input_ids.size()[2]
+    ret = torch.cat(
+        [
+            all_input_ids[:, :, : length - IMAGE_FEATURES_LENGTH],
+            im_input_ids[:, :num_options, :],
+        ],
+        dim=2,
+    )
+    ret = torch.clamp(ret, 0, vocab_size - 1)
 
     return ret
 
@@ -848,17 +856,17 @@ def main():
         choices=("jaqket"),
         help=", ".join(processors.keys()),
     )
+    parser.add_argument("--output_dir", default="./outputs/", type=str, help="")
     parser.add_argument(
-        "--output_dir", default="./outputs/", type=str, help="")
+        "--train_fname", default="train_questions.json", type=str, help=""
+    )
+    parser.add_argument("--dev_fname", default="dev1_questions.json", type=str, help="")
     parser.add_argument(
-        "--train_fname", default="train_questions.json", type=str, help="")
+        "--test_fname", default="dev2_questions.json", type=str, help=""
+    )
     parser.add_argument(
-        "--dev_fname", default="dev1_questions.json", type=str, help="")
-    parser.add_argument(
-        "--test_fname", default="dev2_questions.json", type=str, help="")
-    parser.add_argument(
-        "--entities_fname", default="candidate_entities.json.gz", type=str,
-        help="")
+        "--entities_fname", default="candidate_entities.json.gz", type=str, help=""
+    )
     # Other parameters
     parser.add_argument("--config_name", default="", type=str, help="")
     parser.add_argument("--tokenizer_name", default="", type=str, help="")
@@ -999,9 +1007,8 @@ def main():
         cache_dir=args.cache_dir if args.cache_dir else None,
     )
 
-    image_model=BertForMultipleChoice.from_pretrained(
-        args.model_name_or_path,
-        config=config,
+    image_model = BertForMultipleChoice.from_pretrained(
+        args.model_name_or_path, config=config,
     )
 
     if args.local_rank == 0:
@@ -1026,12 +1033,9 @@ def main():
         t_output_dir = os.path.join(
             args.output_dir, "checkpoint-{}/".format(args.init_global_step)
         )
-        if (os.path.isfile(
-                os.path.join(t_output_dir, "optimizer.pt")) and
-            os.path.isfile(
-                os.path.join(t_output_dir, "scheduler.pt")
-            )
-        ):
+        if os.path.isfile(
+            os.path.join(t_output_dir, "optimizer.pt")
+        ) and os.path.isfile(os.path.join(t_output_dir, "scheduler.pt")):
             # Load in optimizer and scheduler states
             model = model_class.from_pretrained(t_output_dir)  # , force_download=True)
             tokenizer = tokenizer_class.from_pretrained(args.output_dir)

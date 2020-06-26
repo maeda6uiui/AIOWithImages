@@ -147,5 +147,8 @@ def create_input_features_dataset(json_filename, cache_dir, save_dir):
 
     logger.info("入力する特徴量のtensorの作成が終了しました。")
 
-if __name__=="__main__":
-    create_input_features_dataset(DEV1_JSON_FILENAME,DEV1_FEATURES_DIR,DEV1_ALL_FEATURES_DIR)
+
+if __name__ == "__main__":
+    create_input_features_dataset(
+        DEV1_JSON_FILENAME, DEV1_FEATURES_DIR, DEV1_ALL_FEATURES_DIR
+    )
