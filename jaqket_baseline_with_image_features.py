@@ -817,6 +817,8 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     all_input_mask=all_input_mask[:,:num_options,:max_seq_length]
     all_segment_ids=all_segment_ids[:,:num_options,:max_seq_length]
 
+    all_input_ids=torch.clamp(all_input_ids,0,len(tokenizer)-1)
+
     dataset = TensorDataset(
         all_input_ids, all_input_mask, all_segment_ids, all_label_ids
     )
