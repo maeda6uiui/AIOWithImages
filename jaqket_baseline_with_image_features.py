@@ -817,9 +817,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     # Options should contain image features.
     data_num=all_input_ids.size()[0]
 
-    pickup_input_ids=torch.empty(data_num,num_options,max_seq_length)
-    pickup_input_mask=torch.empty(data_num,num_options,max_seq_length)
-    pickup_segment_ids=torch.empty(data_num,num_options,max_seq_length)
+    pickup_input_ids=torch.empty(data_num,num_options,max_seq_length,dtype=torch.long)
+    pickup_input_mask=torch.empty(data_num,num_options,max_seq_length,dtype=torch.long)
+    pickup_segment_ids=torch.empty(data_num,num_options,max_seq_length,dtype=torch.long)
 
     for i in range(data_num):
         pickup_indices=[]
