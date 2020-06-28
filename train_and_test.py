@@ -23,12 +23,13 @@ TRAIN_ALL_FEATURES_DIR = "./AllFeatures/Train/"
 DEV1_ALL_FEATURES_DIR = "./AllFeatures/Dev1/"
 DEV2_ALL_FEATURES_DIR = "./AllFeatures/Dev2/"
 
-EPOCH_NUM = 3
-TRAIN_BATCH_SIZE = 2
+EPOCH_NUM = 5
+TRAIN_BATCH_SIZE = 1
 TEST_BATCH_SIZE = 4
 
 MAX_SEQ_LENGTH = 512
-INPUT_SEQ_LENGTH = 200
+INPUT_SEQ_LENGTH = 512
+NUM_OPTIONS=4
 
 tokenizer = BertJapaneseTokenizer.from_pretrained(
     "cl-tohoku/bert-base-japanese-whole-word-masking"
@@ -62,9 +63,9 @@ def create_input_features_dataset_from_caches(cache_dir):
     all_label_ids = torch.load(cache_dir + "all_label_ids.pt")
 
     # tensorがメモリに乗らないので、サイズを小さくする。
-    all_input_ids = all_input_ids[:, :, :INPUT_SEQ_LENGTH]
-    all_input_mask = all_input_mask[:, :, :INPUT_SEQ_LENGTH]
-    all_segment_ids = all_segment_ids[:, :, :INPUT_SEQ_LENGTH]
+    all_input_ids = all_input_ids[:, :NUM_OPTIONS, :INPUT_SEQ_LENGTH]
+    all_input_mask = all_input_mask[:, :NUM_OPTIONS, :INPUT_SEQ_LENGTH]
+    all_segment_ids = all_segment_ids[:, :NUM_OPTIONS, :INPUT_SEQ_LENGTH]
 
     # clamp
     all_input_ids = torch.clamp(all_input_ids, 0, len(tokenizer) - 1)
