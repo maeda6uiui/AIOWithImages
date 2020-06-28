@@ -150,5 +150,11 @@ def create_input_features_dataset(json_filename, cache_dir, save_dir):
 
 if __name__ == "__main__":
     create_input_features_dataset(
+        TRAIN_JSON_FILENAME, TRAIN_FEATURES_DIR, TRAIN_ALL_FEATURES_DIR
+    )
+    create_input_features_dataset(
         DEV1_JSON_FILENAME, DEV1_FEATURES_DIR, DEV1_ALL_FEATURES_DIR
+    )
+    create_input_features_dataset(
+        DEV2_JSON_FILENAME, DEV2_FEATURES_DIR, DEV2_ALL_FEATURES_DIR
     )

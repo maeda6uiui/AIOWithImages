@@ -128,7 +128,6 @@ def convert_example_to_features(example, cache_dir):
 
 
 if __name__ == "__main__":
-    """
     # 訓練データ
     logger.info("訓練データの特徴量の生成を開始します。")
 
@@ -138,6 +137,15 @@ if __name__ == "__main__":
 
     logger.info("訓練データの特徴量の生成が終了しました。")
 
+    # 検証データ
+    logger.info("検証データの特徴量の生成を開始します。")
+
+    examples = load_examples(DEV1_JSON_FILENAME)
+    for example in tqdm(examples):
+        convert_example_to_features(example, DEV1_FEATURES_DIR)
+
+    logger.info("検証データの特徴量の生成が終了しました。")
+
     # テストデータ
     logger.info("テストデータの特徴量の生成を開始します。")
 
@@ -146,12 +154,3 @@ if __name__ == "__main__":
         convert_example_to_features(example, DEV2_FEATURES_DIR)
 
     logger.info("テストデータの特徴量の生成が終了しました。")
-    """
-
-    logger.info("検証データの特徴量の生成を開始します。")
-
-    examples = load_examples(DEV1_JSON_FILENAME)
-    for example in tqdm(examples):
-        convert_example_to_features(example, DEV1_FEATURES_DIR)
-
-    logger.info("検証データの特徴量の生成が終了しました。")
