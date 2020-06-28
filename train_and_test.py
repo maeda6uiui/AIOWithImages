@@ -29,7 +29,7 @@ TEST_BATCH_SIZE = 4
 
 MAX_SEQ_LENGTH = 512
 INPUT_SEQ_LENGTH = 512
-NUM_OPTIONS=4
+NUM_OPTIONS = 4
 
 tokenizer = BertJapaneseTokenizer.from_pretrained(
     "cl-tohoku/bert-base-japanese-whole-word-masking"

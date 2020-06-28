@@ -257,7 +257,7 @@ def convert_examples_to_features(
 
             # token_type_ids is 0 for text input and 1 for image features.
             for i in range(len(token_type_ids)):
-                token_type_ids[i]=0
+                token_type_ids[i] = 0
 
             # The mask has 1 for real tokens and 0 for padding tokens. Only
             # real tokens are attended to.
@@ -296,8 +296,8 @@ def convert_examples_to_features(
 
                 input_ids = input_ids[: max_length - im_features_length] + im_features
 
-                for i in range(max_length-im_features_length,max_length):
-                    token_type_ids[i]=1
+                for i in range(max_length - im_features_length, max_length):
+                    token_type_ids[i] = 1
 
             assert len(input_ids) == max_length
             assert len(attention_mask) == max_length

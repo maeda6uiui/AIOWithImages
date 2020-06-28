@@ -6,9 +6,11 @@ import torchvision
 from tqdm import tqdm
 from PIL import Image
 
+OUTPUT_DIMENSION = 150
+
 vgg16 = torchvision.models.vgg16(pretrained=True)
 vgg16.eval()
-vgg16.classifier[6] = torch.nn.Linear(4096, 150)
+vgg16.classifier[6] = torch.nn.Linear(4096, OUTPUT_DIMENSION)
 
 normalize = torchvision.transforms.Normalize(
     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
