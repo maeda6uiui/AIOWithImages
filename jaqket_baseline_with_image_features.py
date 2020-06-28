@@ -813,14 +813,59 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     all_segment_ids=torch.load(features_dir_name+"all_segment_ids.pt").cpu()
     all_label_ids=torch.load(features_dir_name+"all_label_ids.pt").cpu()
 
-    all_input_ids=all_input_ids[:,:num_options,:max_seq_length]
-    all_input_mask=all_input_mask[:,:num_options,:max_seq_length]
-    all_segment_ids=all_segment_ids[:,:num_options,:max_seq_length]
+    # Pick up some options for the process.
+    # Options should contain image features.
+    data_num=all_input_ids.size()[0]
 
-    all_input_ids=torch.clamp(all_input_ids,0,len(tokenizer)-1)
+    pickup_input_ids=torch.empty(data_num,num_options,max_seq_length)
+    pickup_input_mask=torch.empty(data_num,num_options,max_seq_length)
+    pickup_segment_ids=torch.empty(data_num,num_options,max_seq_length)
+
+    for i in range(data_num):
+        pickup_indices=[]
+
+        for j in range(num_options):
+            if torch.max(all_segment_ids).item()==1:
+                pickup_indices.append(j)
+
+        if len(pickup_indices)>=num_options:
+            for j in range(num_options):
+                pickup_input_ids[i,j]=all_input_ids[i,pickup_indices[j]]
+                pickup_input_mask[i,j]=all_input_mask[i,pickup_indices[j]]
+                pickup_segment_ids[i,j]=all_segment_ids[i,pickup_indices[j]]
+        else:
+            for j in range(len(pickup_indices)):
+                pickup_input_ids[i,j]=all_input_ids[i,pickup_indices[j]]
+                pickup_input_mask[i,j]=all_input_mask[i,pickup_indices[j]]
+                pickup_segment_ids[i,j]=all_segment_ids[i,pickup_indices[j]]
+
+            assigned_count=len(pickup_indices)
+            for j in range(20):
+                if j in pickup_indices:
+                    continue
+                if assigned_count==num_options:
+                    break
+
+                pickup_input_ids[i,assigned_count]=all_input_ids[i,j]
+                pickup_input_mask[i,assigned_count]=all_input_mask[i,j]
+                pickup_segment_ids[i,assigned_count]=all_segment_ids[i,j]
+
+                assigned_count+=1
+
+    pickup_input_ids=torch.clamp(pickup_input_ids,0,len(tokenizer)-1)
+
+    # Print the first input.
+    for i in range(1):
+        torch.set_printoptions(profile="full")
+        logger.info("===== Data {} =====".format(i))
+        logger.info("input_ids: {}".format(pickup_input_ids[i]))
+        logger.info("input_mask: {}".format(pickup_input_mask[i]))
+        logger.info("segment_ids: {}".format(pickup_segment_ids[i]))
+        logger.info("label_ids: {}".format(all_label_ids[i]))
+        torch.set_printoptions(profile="default")
 
     dataset = TensorDataset(
-        all_input_ids, all_input_mask, all_segment_ids, all_label_ids
+        pickup_input_ids, pickup_input_mask, pickup_segment_ids, all_label_ids
     )
     return dataset
 
