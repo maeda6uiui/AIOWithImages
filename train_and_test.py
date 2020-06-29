@@ -63,20 +63,13 @@ def create_input_features_dataset_from_caches(cache_dir,num_options=4):
     all_segment_ids = torch.load(cache_dir + "all_segment_ids.pt")
     all_label_ids = torch.load(cache_dir + "all_label_ids.pt")
 
-    features_dir_name=""
-
-    all_input_ids=torch.load(features_dir_name+"all_input_ids.pt").cpu()
-    all_input_mask=torch.load(features_dir_name+"all_input_mask.pt").cpu()
-    all_segment_ids=torch.load(features_dir_name+"all_segment_ids.pt").cpu()
-    all_label_ids=torch.load(features_dir_name+"all_label_ids.pt").cpu()
-
     # Pick up some options for the process.
     # Options should contain image features.
     data_num=all_input_ids.size()[0]
 
-    pickup_input_ids=torch.empty(data_num,num_options,MAX_SEQ_LENGTH,dtype=torch.long)
-    pickup_input_mask=torch.empty(data_num,num_options,MAX_SEQ_LENGTH,dtype=torch.long)
-    pickup_segment_ids=torch.empty(data_num,num_options,MAX_SEQ_LENGTH,dtype=torch.long)
+    pickup_input_ids=torch.empty(data_num,num_options,MAX_SEQ_LENGTH,dtype=torch.long).cuda()
+    pickup_input_mask=torch.empty(data_num,num_options,MAX_SEQ_LENGTH,dtype=torch.long).cuda()
+    pickup_segment_ids=torch.empty(data_num,num_options,MAX_SEQ_LENGTH,dtype=torch.long).cuda()
 
     for i in range(data_num):
         pickup_indices=[]
@@ -254,6 +247,8 @@ if __name__ == "__main__":
 
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
+
+    logger.info("Train options num: {}\tTest options num: {}".format(TRAIN_NUM_OPTIONS,TEST_NUM_OPTIONS))
 
     train_dataset = create_input_features_dataset_from_caches(TRAIN_ALL_FEATURES_DIR,TRAIN_NUM_OPTIONS)
     train(model, train_dataset)
