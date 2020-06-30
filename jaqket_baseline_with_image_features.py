@@ -40,9 +40,9 @@ from transformers import (
 
 logger = logging.getLogger(__name__)
 
-TRAIN_ALL_FEATURES_DIR="../AllFeatures/Train/"
-DEV1_ALL_FEATURES_DIR="../AllFeatures/Dev1/"
-DEV2_ALL_FEATURES_DIR="../AllFeatures/Dev2/"
+TRAIN_ALL_FEATURES_DIR = "../AllFeatures/Train/"
+DEV1_ALL_FEATURES_DIR = "../AllFeatures/Dev1/"
+DEV2_ALL_FEATURES_DIR = "../AllFeatures/Dev2/"
 
 ###############################################################################
 ###############################################################################
@@ -794,65 +794,71 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
 
     """
 
-    max_seq_length=args.max_seq_length
+    max_seq_length = args.max_seq_length
 
-    features_dir_name=""
-    num_options=0
+    features_dir_name = ""
+    num_options = 0
     if evaluate:
-        features_dir_name=DEV1_ALL_FEATURES_DIR
-        num_options=args.eval_num_options
+        features_dir_name = DEV1_ALL_FEATURES_DIR
+        num_options = args.eval_num_options
     elif test:
-        features_dir_name=DEV2_ALL_FEATURES_DIR
-        num_options=args.eval_num_options
+        features_dir_name = DEV2_ALL_FEATURES_DIR
+        num_options = args.eval_num_options
     else:
-        features_dir_name=TRAIN_ALL_FEATURES_DIR
-        num_options=args.train_num_options
+        features_dir_name = TRAIN_ALL_FEATURES_DIR
+        num_options = args.train_num_options
 
-    all_input_ids=torch.load(features_dir_name+"all_input_ids.pt").cpu()
-    all_input_mask=torch.load(features_dir_name+"all_input_mask.pt").cpu()
-    all_segment_ids=torch.load(features_dir_name+"all_segment_ids.pt").cpu()
-    all_label_ids=torch.load(features_dir_name+"all_label_ids.pt").cpu()
+    all_input_ids = torch.load(features_dir_name + "all_input_ids.pt").cpu()
+    all_input_mask = torch.load(features_dir_name + "all_input_mask.pt").cpu()
+    all_segment_ids = torch.load(features_dir_name + "all_segment_ids.pt").cpu()
+    all_label_ids = torch.load(features_dir_name + "all_label_ids.pt").cpu()
 
     # Pick up some options for the process.
     # Options should contain image features.
-    data_num=all_input_ids.size()[0]
+    data_num = all_input_ids.size()[0]
 
-    pickup_input_ids=torch.empty(data_num,num_options,max_seq_length,dtype=torch.long)
-    pickup_input_mask=torch.empty(data_num,num_options,max_seq_length,dtype=torch.long)
-    pickup_segment_ids=torch.empty(data_num,num_options,max_seq_length,dtype=torch.long)
+    pickup_input_ids = torch.empty(
+        data_num, num_options, max_seq_length, dtype=torch.long
+    )
+    pickup_input_mask = torch.empty(
+        data_num, num_options, max_seq_length, dtype=torch.long
+    )
+    pickup_segment_ids = torch.empty(
+        data_num, num_options, max_seq_length, dtype=torch.long
+    )
 
     for i in range(data_num):
-        pickup_indices=[]
+        pickup_indices = []
 
         for j in range(num_options):
-            if torch.max(all_segment_ids).item()==1:
+            if torch.max(all_segment_ids).item() == 1:
                 pickup_indices.append(j)
 
-        if len(pickup_indices)>=num_options:
+        if len(pickup_indices) >= num_options:
             for j in range(num_options):
-                pickup_input_ids[i,j]=all_input_ids[i,pickup_indices[j]]
-                pickup_input_mask[i,j]=all_input_mask[i,pickup_indices[j]]
-                pickup_segment_ids[i,j]=all_segment_ids[i,pickup_indices[j]]
+                pickup_input_ids[i, j] = all_input_ids[i, pickup_indices[j]]
+                pickup_input_mask[i, j] = all_input_mask[i, pickup_indices[j]]
+                pickup_segment_ids[i, j] = all_segment_ids[i, pickup_indices[j]]
         else:
             for j in range(len(pickup_indices)):
-                pickup_input_ids[i,j]=all_input_ids[i,pickup_indices[j]]
-                pickup_input_mask[i,j]=all_input_mask[i,pickup_indices[j]]
-                pickup_segment_ids[i,j]=all_segment_ids[i,pickup_indices[j]]
+                pickup_input_ids[i, j] = all_input_ids[i, pickup_indices[j]]
+                pickup_input_mask[i, j] = all_input_mask[i, pickup_indices[j]]
+                pickup_segment_ids[i, j] = all_segment_ids[i, pickup_indices[j]]
 
-            assigned_count=len(pickup_indices)
+            assigned_count = len(pickup_indices)
             for j in range(20):
                 if j in pickup_indices:
                     continue
-                if assigned_count==num_options:
+                if assigned_count == num_options:
                     break
 
-                pickup_input_ids[i,assigned_count]=all_input_ids[i,j]
-                pickup_input_mask[i,assigned_count]=all_input_mask[i,j]
-                pickup_segment_ids[i,assigned_count]=all_segment_ids[i,j]
+                pickup_input_ids[i, assigned_count] = all_input_ids[i, j]
+                pickup_input_mask[i, assigned_count] = all_input_mask[i, j]
+                pickup_segment_ids[i, assigned_count] = all_segment_ids[i, j]
 
-                assigned_count+=1
+                assigned_count += 1
 
-    pickup_input_ids=torch.clamp(pickup_input_ids,0,len(tokenizer)-1)
+    pickup_input_ids = torch.clamp(pickup_input_ids, 0, len(tokenizer) - 1)
 
     # Print the first input.
     for i in range(1):

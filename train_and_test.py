@@ -30,7 +30,7 @@ TEST_BATCH_SIZE = 4
 MAX_SEQ_LENGTH = 512
 INPUT_SEQ_LENGTH = 512
 TRAIN_NUM_OPTIONS = 4
-TEST_NUM_OPTIONS=20
+TEST_NUM_OPTIONS = 20
 
 tokenizer = BertJapaneseTokenizer.from_pretrained(
     "cl-tohoku/bert-base-japanese-whole-word-masking"
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
 
 
-def create_input_features_dataset_from_caches(cache_dir,num_options=4):
+def create_input_features_dataset_from_caches(cache_dir, num_options=4):
     """
     キャッシュファイルを読み込み、入力特徴量のデータセットを作成します。
 
@@ -65,44 +65,50 @@ def create_input_features_dataset_from_caches(cache_dir,num_options=4):
 
     # Pick up some options for the process.
     # Options should contain image features.
-    data_num=all_input_ids.size()[0]
+    data_num = all_input_ids.size()[0]
 
-    pickup_input_ids=torch.empty(data_num,num_options,MAX_SEQ_LENGTH,dtype=torch.long).cuda()
-    pickup_input_mask=torch.empty(data_num,num_options,MAX_SEQ_LENGTH,dtype=torch.long).cuda()
-    pickup_segment_ids=torch.empty(data_num,num_options,MAX_SEQ_LENGTH,dtype=torch.long).cuda()
+    pickup_input_ids = torch.empty(
+        data_num, num_options, MAX_SEQ_LENGTH, dtype=torch.long
+    ).cuda()
+    pickup_input_mask = torch.empty(
+        data_num, num_options, MAX_SEQ_LENGTH, dtype=torch.long
+    ).cuda()
+    pickup_segment_ids = torch.empty(
+        data_num, num_options, MAX_SEQ_LENGTH, dtype=torch.long
+    ).cuda()
 
     for i in range(data_num):
-        pickup_indices=[]
+        pickup_indices = []
 
         for j in range(num_options):
-            if torch.max(all_segment_ids).item()==1:
+            if torch.max(all_segment_ids).item() == 1:
                 pickup_indices.append(j)
 
-        if len(pickup_indices)>=num_options:
+        if len(pickup_indices) >= num_options:
             for j in range(num_options):
-                pickup_input_ids[i,j]=all_input_ids[i,pickup_indices[j]]
-                pickup_input_mask[i,j]=all_input_mask[i,pickup_indices[j]]
-                pickup_segment_ids[i,j]=all_segment_ids[i,pickup_indices[j]]
+                pickup_input_ids[i, j] = all_input_ids[i, pickup_indices[j]]
+                pickup_input_mask[i, j] = all_input_mask[i, pickup_indices[j]]
+                pickup_segment_ids[i, j] = all_segment_ids[i, pickup_indices[j]]
         else:
             for j in range(len(pickup_indices)):
-                pickup_input_ids[i,j]=all_input_ids[i,pickup_indices[j]]
-                pickup_input_mask[i,j]=all_input_mask[i,pickup_indices[j]]
-                pickup_segment_ids[i,j]=all_segment_ids[i,pickup_indices[j]]
+                pickup_input_ids[i, j] = all_input_ids[i, pickup_indices[j]]
+                pickup_input_mask[i, j] = all_input_mask[i, pickup_indices[j]]
+                pickup_segment_ids[i, j] = all_segment_ids[i, pickup_indices[j]]
 
-            assigned_count=len(pickup_indices)
+            assigned_count = len(pickup_indices)
             for j in range(20):
                 if j in pickup_indices:
                     continue
-                if assigned_count==num_options:
+                if assigned_count == num_options:
                     break
 
-                pickup_input_ids[i,assigned_count]=all_input_ids[i,j]
-                pickup_input_mask[i,assigned_count]=all_input_mask[i,j]
-                pickup_segment_ids[i,assigned_count]=all_segment_ids[i,j]
+                pickup_input_ids[i, assigned_count] = all_input_ids[i, j]
+                pickup_input_mask[i, assigned_count] = all_input_mask[i, j]
+                pickup_segment_ids[i, assigned_count] = all_segment_ids[i, j]
 
-                assigned_count+=1
+                assigned_count += 1
 
-    pickup_input_ids=torch.clamp(pickup_input_ids,0,len(tokenizer)-1)
+    pickup_input_ids = torch.clamp(pickup_input_ids, 0, len(tokenizer) - 1)
 
     # Print the first input.
     for i in range(1):
@@ -248,10 +254,18 @@ if __name__ == "__main__":
     # finetuningされたパラメータを読み込む。
     # model.load_state_dict(torch.load("./pytorch_model.bin"))
 
-    logger.info("Train options num: {}\tTest options num: {}".format(TRAIN_NUM_OPTIONS,TEST_NUM_OPTIONS))
+    logger.info(
+        "Train options num: {}\tTest options num: {}".format(
+            TRAIN_NUM_OPTIONS, TEST_NUM_OPTIONS
+        )
+    )
 
-    train_dataset = create_input_features_dataset_from_caches(TRAIN_ALL_FEATURES_DIR,TRAIN_NUM_OPTIONS)
+    train_dataset = create_input_features_dataset_from_caches(
+        TRAIN_ALL_FEATURES_DIR, TRAIN_NUM_OPTIONS
+    )
     train(model, train_dataset)
 
-    test_dataset = create_input_features_dataset_from_caches(DEV2_ALL_FEATURES_DIR,TEST_NUM_OPTIONS)
+    test_dataset = create_input_features_dataset_from_caches(
+        DEV2_ALL_FEATURES_DIR, TEST_NUM_OPTIONS
+    )
     test(model, test_dataset)
