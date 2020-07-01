@@ -42,9 +42,9 @@ logger = logging.getLogger(__name__)
 
 IMAGE_FEATURES_DIR = "../WikipediaImages/Features/"
 
-TRAIN_ALL_FEATURES_DIR="../AllFeatures/Train/"
-DEV1_ALL_FEATURES_DIR="../AllFeatures/Dev1/"
-DEV2_ALL_FEATURES_DIR="../AllFeatures/Dev2/"
+TRAIN_ALL_FEATURES_DIR = "../AllFeatures/Train/"
+DEV1_ALL_FEATURES_DIR = "../AllFeatures/Dev1/"
+DEV2_ALL_FEATURES_DIR = "../AllFeatures/Dev2/"
 
 ###############################################################################
 ###############################################################################
