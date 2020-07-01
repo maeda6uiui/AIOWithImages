@@ -842,7 +842,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
         pickup_indices = []
 
         for j in range(num_options):
-            if torch.max(all_segment_ids).item() == 1:
+            if torch.max(all_segment_ids[i][j]).item() == 1:
                 pickup_indices.append(j)
 
         if len(pickup_indices) >= num_options:
