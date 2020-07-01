@@ -40,9 +40,7 @@ from transformers import (
 
 logger = logging.getLogger(__name__)
 
-TRAIN_ALL_FEATURES_DIR = "../AllFeatures/Train/"
-DEV1_ALL_FEATURES_DIR = "../AllFeatures/Dev1/"
-DEV2_ALL_FEATURES_DIR = "../AllFeatures/Dev2/"
+IMAGE_FEATURES_DIR = "../WikipediaImages/Features/"
 
 ###############################################################################
 ###############################################################################
@@ -257,6 +255,10 @@ def convert_examples_to_features(
                 inputs["token_type_ids"],
             )
 
+            # token_type_ids is 0 for text input and 1 for image features.
+            for i in range(len(token_type_ids)):
+                token_type_ids[i] = 0
+
             # The mask has 1 for real tokens and 0 for padding tokens. Only
             # real tokens are attended to.
             attention_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
@@ -279,6 +281,23 @@ def convert_examples_to_features(
                 token_type_ids = token_type_ids + (
                     [pad_token_segment_id] * padding_length
                 )
+
+            # Concatenate two lists of input_ids.
+            # The former is encoded text and the latter is image features.
+            # The following code works under the premise that input_ids is already fully occupied by the encoded text.
+            im_features_filename = (
+                IMAGE_FEATURES_DIR + ending + "/" + "image_features.pt"
+            )
+            if os.path.exists(im_features_filename):
+                im_features = torch.load(im_features_filename).cpu()
+                im_features = torch.clamp(im_features, 0, len(tokenizer) - 1)
+                im_features_length = im_features.size()[0]
+                im_features = im_features.tolist()
+
+                input_ids = input_ids[: max_length - im_features_length] + im_features
+
+                for i in range(max_length - im_features_length, max_length):
+                    token_type_ids[i] = 1
 
             assert len(input_ids) == max_length
             assert len(attention_mask) == max_length
@@ -713,7 +732,6 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
         # the dataset, and the others will use the cache
         torch.distributed.barrier()
 
-    """
     processor = processors[task]()
     # Load data features from cache or dataset file
     if evaluate:
@@ -793,7 +811,6 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     all_label_ids = torch.tensor([f.label for f in features], dtype=torch.long)
 
     """
-
     max_seq_length = args.max_seq_length
 
     features_dir_name = ""
@@ -873,6 +890,12 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     dataset = TensorDataset(
         pickup_input_ids, pickup_input_mask, pickup_segment_ids, all_label_ids
     )
+    """
+
+    dataset = TensorDataset(
+        all_input_ids, all_input_mask, all_segment_ids, all_label_ids
+    )
+
     return dataset
 
 
