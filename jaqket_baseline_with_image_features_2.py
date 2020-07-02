@@ -837,6 +837,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
     pickup_segment_ids = torch.empty(
         data_num, num_options, max_seq_length, dtype=torch.long
     )
+    pickup_label_ids=torch.empty(
+        data_num,num_options,max_seq_length,dtype=torch.long
+    )
 
     for i in range(data_num):
         pickup_indices = []
@@ -844,6 +847,12 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
         for j in range(num_options):
             if torch.max(all_segment_ids[i][j]).item() == 1:
                 pickup_indices.append(j)
+
+        correct_label=all_label_ids[i].item()
+        if correct_label in pickup_indices:
+            pickup_label_ids[i]=pickup_indices.index(correct_label)
+        else:
+            pickup_label_ids[i]=correct_label
 
         if len(pickup_indices) >= num_options:
             for j in range(num_options):
@@ -878,11 +887,11 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
         logger.info("input_ids: {}".format(pickup_input_ids[i]))
         logger.info("input_mask: {}".format(pickup_input_mask[i]))
         logger.info("segment_ids: {}".format(pickup_segment_ids[i]))
-        logger.info("label_ids: {}".format(all_label_ids[i]))
+        logger.info("label_ids: {}".format(pickup_label_ids[i]))
         torch.set_printoptions(profile="default")
 
     dataset = TensorDataset(
-        pickup_input_ids, pickup_input_mask, pickup_segment_ids, all_label_ids
+        pickup_input_ids, pickup_input_mask, pickup_segment_ids, pickup_label_ids
     )
 
     return dataset
