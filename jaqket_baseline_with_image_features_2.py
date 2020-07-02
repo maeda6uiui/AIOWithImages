@@ -852,7 +852,16 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False, test=False):
         if correct_label in pickup_indices:
             pickup_label_ids[i]=pickup_indices.index(correct_label)
         else:
-            pickup_label_ids[i]=correct_label
+            tmp_count=0
+            for j in range(20):
+                if j in pickup_indices:
+                    continue
+                if j==correct_label:
+                    break
+
+                tmp_count+=1
+
+            pickup_label_ids[i]=len(pickup_indices)+tmp_count
 
         if len(pickup_indices) >= num_options:
             for j in range(num_options):
