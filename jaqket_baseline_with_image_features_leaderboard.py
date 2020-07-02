@@ -306,7 +306,7 @@ def convert_examples_to_features(
             assert len(token_type_ids) == max_length
             choices_features.append((input_ids, attention_mask, token_type_ids))
 
-        label = label_map[example.label]
+        label = 0
 
         if ex_index < 2:
             logger.info("*** Example ***")
