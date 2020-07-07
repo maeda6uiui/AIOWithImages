@@ -3,7 +3,7 @@ import subprocess
 
 WORKING_DIR="./working_dir/"
 
-class TrainAndTestScriptGenerator(object):
+class TrainAndTestDriver(object):
     def __init__(
         self,system_name="jaqket_baseline",
         data_dir="../Data/",
@@ -58,12 +58,11 @@ class TrainAndTestScriptGenerator(object):
     def save_script(self):
         script_filename="run_{}_all.sh".format(self.system_name)
         with open(WORKING_DIR+script_filename,"w",encoding="utf-8") as w:
+            w.write("#!/bin/bash")
+            w.write("\n\n")
             w.write(self.command)
             w.write("\n")
             w.write(self.command2)
-
-        chmod_command="chmod +x {}".format(WORKING_DIR+script_filename)
-        subprocess.run(chmod_command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
     def run(self):
         cd_command="cd ./working_dir/"
