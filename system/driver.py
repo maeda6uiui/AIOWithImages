@@ -46,7 +46,7 @@ class TrainAndTestScriptGenerator(object):
             "\t--eval_num_options 20 \\\n"
             "\t--per_gpu_eval_batch_size 4 \\\n"
             "\t--do_test \\\n"
-            "\t--do_eval \\\n"
+            "\t--do_eval\n"
         ).format(
             system_name=system_name,
             data_dir=data_dir,
@@ -62,7 +62,11 @@ class TrainAndTestScriptGenerator(object):
             w.write("\n")
             w.write(self.command2)
 
-if __name__=="__main__":
-    driver=TrainAndTestScriptGenerator()
-    driver.save_script("./working_dir/")
+        chmod_command="chmod +x {}".format(save_dir+script_filename)
+        subprocess.run(chmod_command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
+    def run(self,working_dir="./working_dir/"):
+        cd_command="cd {}".format(working_dir)
+        subprocess.run(cd_command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+
     
