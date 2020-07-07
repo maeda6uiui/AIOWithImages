@@ -1,12 +1,14 @@
 import os
 import subprocess
 
+WORKING_DIR="./working_dir/"
+
 class TrainAndTestScriptGenerator(object):
     def __init__(
         self,system_name="jaqket_baseline",
         data_dir="../Data/",
         model_name_or_path="cl-tohoku/bert-base-japanese-whole-word-masking",
-        output_dir="./working_dir/output_dir/"):
+        output_dir=WORKING_DIR+"output_dir/"):
         self.system_name=system_name
 
         self.command=(
@@ -53,18 +55,16 @@ class TrainAndTestScriptGenerator(object):
             output_dir=output_dir
         )
 
-    def save_script(self,save_dir):
-        os.makedirs(save_dir,exist_ok=True)
-
+    def save_script(self):
         script_filename="run_{}_all.sh".format(self.system_name)
-        with open(save_dir+script_filename,"w",encoding="utf-8") as w:
+        with open(WORKING_DIR+script_filename,"w",encoding="utf-8") as w:
             w.write(self.command)
             w.write("\n")
             w.write(self.command2)
 
-        chmod_command="chmod +x {}".format(save_dir+script_filename)
+        chmod_command="chmod +x {}".format(WORKING_DIR+script_filename)
         subprocess.run(chmod_command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
-    def run(self,working_dir="./working_dir/"):
-        cd_command="cd {}".format(working_dir)
+    def run(self):
+        cd_command="cd ./working_dir/"
         subprocess.run(cd_command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
