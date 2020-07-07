@@ -43,7 +43,7 @@ class ObjectDetection(object):
         image_dir=self.article_map[article_name]
 
         ret_pred_classes=torch.empty(0,dtype=torch.long)
-        ret_box_centers=torch.empty(0,dtype=torch.long)
+        ret_box_centers=torch.empty(0,dtype=torch.float)
 
         files = os.listdir(image_dir)
         for file in files:
@@ -55,7 +55,7 @@ class ObjectDetection(object):
             ret_pred_classes=torch.cat([ret_pred_classes,pred_classes],dim=0)
 
             pred_boxes = outputs["instances"].pred_boxes
-            box_centers = pred_boxes.get_centers().long().flatten()
+            box_centers = pred_boxes.get_centers().flatten()
             ret_box_centers=torch.cat([ret_box_centers,box_centers],dim=0)
 
         return ret_pred_classes,ret_box_centers
