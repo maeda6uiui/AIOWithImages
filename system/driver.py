@@ -68,5 +68,3 @@ class TrainAndTestScriptGenerator(object):
     def run(self,working_dir="./working_dir/"):
         cd_command="cd {}".format(working_dir)
         subprocess.run(cd_command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-
-    
