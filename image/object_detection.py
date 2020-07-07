@@ -21,6 +21,9 @@ cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
 cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
     "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
 )
+if torch.cuda.is_available()==False:
+    cfg.MODEL.DEVICE="cpu"
+
 predictor = DefaultPredictor(cfg)
 
 class ObjectDetection(object):
@@ -38,6 +41,12 @@ class ObjectDetection(object):
             image_dir = image_base_dir+str(dir_1) + "/" + str(dir_2) + "/"
 
             self.article_map[article_name]=image_dir
+
+        #Make a map of labels for COCO dataset
+        self.coco_labels_map={}
+        with open("./image/coco_labels.txt","r",encoding="utf-8") as r:
+            for i,label in enumerate(r):
+                self.coco_labels_map[i]=label.rstrip()
 
     def get_pred_classes_and_box_centers(self,article_name):
         image_dir=self.article_map[article_name]
@@ -59,3 +68,14 @@ class ObjectDetection(object):
             ret_box_centers=torch.cat([ret_box_centers,box_centers],dim=0)
 
         return ret_pred_classes,ret_box_centers
+
+    def convert_classes_to_labels(self,pred_classes):
+        labels=[]
+
+        bound=pred_classes.shape[0]
+        for i in range(bound):
+            pred_class=pred_classes[i]
+            label=self.coco_labels_map[pred_classes[i]]
+            labels.append(label)
+
+        return labels
