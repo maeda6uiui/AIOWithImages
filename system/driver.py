@@ -5,12 +5,11 @@ WORKING_DIR="./working_dir/"
 
 class TrainAndTestDriver(object):
     def __init__(
-        self,system_name="jaqket_baseline",
+        self,
+        system_name="jaqket_baseline",
         data_dir="../Data/",
         model_name_or_path="cl-tohoku/bert-base-japanese-whole-word-masking",
         output_dir=WORKING_DIR+"output_dir/"):
-        self.system_name=system_name
-
         self.command=(
             "python3 ../system/{system_name}.py \\\n"
             "\t--data_dir {data_dir} \\\n"
@@ -55,7 +54,7 @@ class TrainAndTestDriver(object):
             output_dir=output_dir
         )
 
-    def save_script(self):
+        #Save
         script_filename="run_{}_all.sh".format(self.system_name)
         with open(WORKING_DIR+script_filename,"w",encoding="utf-8") as w:
             w.write("#!/bin/bash")
