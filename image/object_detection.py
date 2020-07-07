@@ -64,14 +64,3 @@ class ObjectDetection(object):
             ret_box_centers=torch.cat([ret_box_centers,box_centers],dim=0)
 
         return ret_pred_classes,ret_box_centers
-
-if __name__=="__main__":
-    od=ObjectDetection("./WikipediaImages/article_list.txt","./WikipediaImages/Images/")
-
-    try:
-        pred_classes,box_centers=od.get_pred_classes_and_box_centers("アメリカ合衆国")
-    except FileNotFoundError as e:
-        logger.error(e)
-        sys.exit(1)
-
-    logger.info("pred_classes={}\nbox_centers={}\n",pred_classes.detach().numpy(),box_centers.detach().numpy())
