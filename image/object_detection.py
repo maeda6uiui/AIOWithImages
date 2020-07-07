@@ -1,19 +1,18 @@
 import os
 import sys
-import logging
 import pandas as pd
 import torch
 from tqdm import tqdm
 import cv2
 import detectron2
 from detectron2.utils.logger import setup_logger
-
-setup_logger()
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 
 #Setup Detectron2
+setup_logger()
+
 cfg = get_cfg()
 cfg.merge_from_file(
     model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
@@ -23,10 +22,6 @@ cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
     "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
 )
 predictor = DefaultPredictor(cfg)
-
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(level=logging.INFO)
 
 class ObjectDetection(object):
     def __init__(self,list_filename,image_base_dir):
