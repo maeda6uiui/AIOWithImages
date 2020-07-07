@@ -1,0 +1,6 @@
+jaqket_baseline.py
+・ベースラインシステム
+jaqket_baseline_swap.py
+・text_aとtext_bの順番を入れ替えたもの
+object_detection
+・Object detectionの予測クラスのラベルをコンテキストの先頭に入れる。
