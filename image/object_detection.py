@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 import pandas as pd
 import torch
 from tqdm import tqdm
@@ -22,6 +23,10 @@ cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(
     "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
 )
 predictor = DefaultPredictor(cfg)
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.INFO)
 
 class ObjectDetection(object):
     def __init__(self,list_filename,image_base_dir):
@@ -59,3 +64,14 @@ class ObjectDetection(object):
             ret_box_centers=torch.cat([ret_box_centers,box_centers],dim=0)
 
         return ret_pred_classes,ret_box_centers
+
+if __name__=="__main__":
+    od=ObjectDetection("./WikipediaImages/article_list.txt","./WikipediaImages/Images/")
+
+    try:
+        pred_classes,box_centers=od.get_pred_classes_and_box_centers("アメリカ合衆国")
+    except FileNotFoundError as e:
+        logger.error(e)
+        sys.exit(1)
+
+    logger.info("pred_classes={}\nbox_centers={}\n",pred_classes.detach().numpy(),box_centers.detach().numpy())
